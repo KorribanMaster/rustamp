@@ -1,4 +1,35 @@
 [package]
 name = "openamp-proxy"
-version = "0.1.0"
-edition = "2024"
+description = "File and console I/O forwarding over rpmsg (rpmsg_retarget), remote client and host server"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[features]
+default = ["rpmsg"]
+# `Channel` implementation over an openamp-rpmsg endpoint.
+rpmsg = ["dep:openamp-rpmsg", "dep:openamp-virtio", "dep:openamp-metal"]
+# Host-side server executing requests against the host filesystem.
+std = []
+
+[dependencies]
+openamp-rpmsg = { workspace = true, optional = true }
+openamp-virtio = { workspace = true, optional = true }
+openamp-metal = { workspace = true, optional = true }
+
+[dev-dependencies]
+openamp-metal = { workspace = true, features = ["std"] }
+openamp-virtio.workspace = true
+openamp-rpmsg.workspace = true
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true

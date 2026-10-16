@@ -9,6 +9,11 @@ version = "0.1.0"
 [[package]]
 name = "openamp-proxy"
 version = "0.1.0"
+dependencies = [
+ "openamp-metal",
+ "openamp-rpmsg",
+ "openamp-virtio",
+]
 
 [[package]]
 name = "openamp-remoteproc"
