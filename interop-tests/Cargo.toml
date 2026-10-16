@@ -1,0 +1,19 @@
+[package]
+name = "openamp-interop-tests"
+description = "Wire-compatibility tests between openamp-rs and the C libmetal/open-amp libraries"
+version = "0.0.0"
+edition = "2024"
+license = "BSD-3-Clause"
+publish = false
+build = "build.rs"
+
+# Not part of the main workspace: building needs cmake, a C compiler and the
+# C sources (./fetch-c-sources.sh). Run with
+#   cargo test --manifest-path interop-tests/Cargo.toml
+[workspace]
+
+[dependencies]
+openamp-metal = { path = "../crates/metal", features = ["std"] }
+openamp-virtio = { path = "../crates/virtio" }
+openamp-rpmsg = { path = "../crates/rpmsg" }
+openamp-remoteproc = { path = "../crates/remoteproc" }

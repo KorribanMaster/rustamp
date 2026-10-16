@@ -206,7 +206,16 @@ fn endpoint_addresses() {
 
 #[test]
 fn threaded_echo_100k() {
-    let sh = Shared::new(1 << VIRTIO_RPMSG_F_NS);
+    threaded_echo(1 << VIRTIO_RPMSG_F_NS);
+}
+
+#[test]
+fn threaded_echo_100k_event_idx() {
+    threaded_echo(1 << VIRTIO_RPMSG_F_NS | 1 << 29);
+}
+
+fn threaded_echo(dfeatures: u32) {
+    let sh = Shared::new(dfeatures);
     let sh2 = sh.clone();
     let remote = std::thread::spawn(move || {
         let opts = Options {

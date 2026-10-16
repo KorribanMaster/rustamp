@@ -397,6 +397,13 @@ impl DriverQueue {
     /// Asks the device not to interrupt when it returns buffers.
     pub fn disable_interrupts(&mut self) -> Result<()> {
         self.interrupts = false;
+        if self.event_idx {
+            // Park used_event a full ring behind, so it is never crossed
+            // (as `virtqueue_disable_cb` does).
+            let parked = self.last_used.wrapping_sub(self.ring.num()).wrapping_sub(1);
+            self.ring
+                .store16(self.ring.layout.used_event(), parked, Ordering::Release)?;
+        }
         let f = self.ring.r16(self.ring.layout.avail_flags())?;
         self.ring
             .w16(self.ring.layout.avail_flags(), f | VRING_AVAIL_F_NO_INTERRUPT)
@@ -544,6 +551,11 @@ impl DeviceQueue {
     /// Asks the driver not to notify when it posts buffers.
     pub fn disable_notifications(&mut self) -> Result<()> {
         self.notifications = false;
+        if self.event_idx {
+            let parked = self.last_avail.wrapping_sub(self.ring.num()).wrapping_sub(1);
+            self.ring
+                .store16(self.ring.layout.avail_event(), parked, Ordering::Release)?;
+        }
         let f = self.ring.r16(self.ring.layout.used_flags())?;
         self.ring
             .w16(self.ring.layout.used_flags(), f | VRING_USED_F_NO_NOTIFY)
@@ -718,6 +730,19 @@ mod tests {
         assert!(dev.kick_needed().unwrap());
         dev.push_used(b, 0).unwrap();
         assert!(!dev.kick_needed().unwrap());
+        // Disabled interrupts park used_event: no kicks however far we go.
+        drv.disable_interrupts().unwrap();
+        while drv.pop_used().unwrap().is_some() {}
+        let c = dev.pop_avail().unwrap().unwrap();
+        dev.push_used(c, 0).unwrap();
+        assert!(!dev.kick_needed().unwrap());
+        // Re-enabling reports the pending buffer.
+        assert!(drv.enable_interrupts().unwrap());
+        // Device side parking works the same way.
+        dev.disable_notifications().unwrap();
+        drv.add(&[buf(4, 1)]).unwrap();
+        assert!(!drv.kick_needed().unwrap());
+        assert!(dev.enable_notifications().unwrap());
     }
 
     #[test]
