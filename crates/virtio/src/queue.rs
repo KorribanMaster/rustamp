@@ -405,8 +405,10 @@ impl DriverQueue {
                 .store16(self.ring.layout.used_event(), parked, Ordering::Release)?;
         }
         let f = self.ring.r16(self.ring.layout.avail_flags())?;
-        self.ring
-            .w16(self.ring.layout.avail_flags(), f | VRING_AVAIL_F_NO_INTERRUPT)
+        self.ring.w16(
+            self.ring.layout.avail_flags(),
+            f | VRING_AVAIL_F_NO_INTERRUPT,
+        )
     }
 
     /// Asks the device to interrupt again. Returns `true` if buffers were
@@ -414,8 +416,10 @@ impl DriverQueue {
     pub fn enable_interrupts(&mut self) -> Result<bool> {
         self.interrupts = true;
         let f = self.ring.r16(self.ring.layout.avail_flags())?;
-        self.ring
-            .w16(self.ring.layout.avail_flags(), f & !VRING_AVAIL_F_NO_INTERRUPT)?;
+        self.ring.w16(
+            self.ring.layout.avail_flags(),
+            f & !VRING_AVAIL_F_NO_INTERRUPT,
+        )?;
         if self.event_idx {
             self.ring.store16(
                 self.ring.layout.used_event(),
@@ -552,7 +556,10 @@ impl DeviceQueue {
     pub fn disable_notifications(&mut self) -> Result<()> {
         self.notifications = false;
         if self.event_idx {
-            let parked = self.last_avail.wrapping_sub(self.ring.num()).wrapping_sub(1);
+            let parked = self
+                .last_avail
+                .wrapping_sub(self.ring.num())
+                .wrapping_sub(1);
             self.ring
                 .store16(self.ring.layout.avail_event(), parked, Ordering::Release)?;
         }

@@ -75,7 +75,10 @@ mod tests {
             data_len: 6,
         };
         let b = s.to_bytes();
-        assert_eq!(b, [3, 0, 0, 0, 1, 0, 0, 0, 0xfe, 0xff, 0xff, 0xff, 6, 0, 0, 0]);
+        assert_eq!(
+            b,
+            [3, 0, 0, 0, 1, 0, 0, 0, 0xfe, 0xff, 0xff, 0xff, 6, 0, 0, 0]
+        );
         assert_eq!(Syscall::from_bytes(&b), Some(s));
         assert_eq!(Syscall::from_bytes(&b[..15]), None);
     }

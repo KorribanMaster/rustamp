@@ -137,8 +137,13 @@ impl<N: Notifier> Transport for RprocVirtio<N> {
     }
 
     fn read_config(&self, offset: usize, buf: &mut [u8]) -> openamp_virtio::Result<()> {
-        if offset.checked_add(buf.len()).is_none_or(|e| e > self.vdev.config_len() as usize) {
-            return Err(openamp_virtio::Error::Metal(openamp_metal::Error::OutOfBounds));
+        if offset
+            .checked_add(buf.len())
+            .is_none_or(|e| e > self.vdev.config_len() as usize)
+        {
+            return Err(openamp_virtio::Error::Metal(
+                openamp_metal::Error::OutOfBounds,
+            ));
         }
         Ok(self
             .vdev
@@ -147,8 +152,13 @@ impl<N: Notifier> Transport for RprocVirtio<N> {
     }
 
     fn write_config(&self, offset: usize, buf: &[u8]) -> openamp_virtio::Result<()> {
-        if offset.checked_add(buf.len()).is_none_or(|e| e > self.vdev.config_len() as usize) {
-            return Err(openamp_virtio::Error::Metal(openamp_metal::Error::OutOfBounds));
+        if offset
+            .checked_add(buf.len())
+            .is_none_or(|e| e > self.vdev.config_len() as usize)
+        {
+            return Err(openamp_virtio::Error::Metal(
+                openamp_metal::Error::OutOfBounds,
+            ));
         }
         self.vdev
             .io()

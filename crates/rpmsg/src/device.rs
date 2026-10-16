@@ -270,9 +270,7 @@ impl<T: Transport, L: RawLock, const E: usize> RpmsgVirtio<T, L, E> {
         let mut svq = DriverQueue::new(&transport.queue(1)?, event_idx)?;
         let r2h = cfg.r2h_buf_size;
         for _ in 0..rvq.size() {
-            let off = pool
-                .alloc(r2h as usize, 16)
-                .map_err(|_| Error::NoBuffer)?;
+            let off = pool.alloc(r2h as usize, 16).map_err(|_| Error::NoBuffer)?;
             pool.io().fill(off, 0, r2h as usize)?;
             let addr = pool.io().offset_to_phys(off).ok_or(Error::InvalidBuffer)?;
             shm.phys_range_to_offset(addr, r2h as usize)
@@ -424,7 +422,9 @@ impl<T: Transport, L: RawLock, const E: usize> RpmsgVirtio<T, L, E> {
     }
 
     fn ptr(&self, offset: usize) -> *const u8 {
-        self.shm.offset_to_virt(offset).unwrap_or(core::ptr::null_mut())
+        self.shm
+            .offset_to_virt(offset)
+            .unwrap_or(core::ptr::null_mut())
     }
 
     // ---- endpoints -------------------------------------------------------
@@ -567,8 +567,7 @@ impl<T: Transport, L: RawLock, const E: usize> RpmsgVirtio<T, L, E> {
                 if q.num_free() > 0 && st.tx_allocated < q.size() {
                     if let Some(pool) = st.pool.as_mut() {
                         if let Ok(off) = pool.alloc(self.h2r_buf_size as usize, 16) {
-                            let addr =
-                                pool.io().offset_to_phys(off).ok_or(Error::InvalidBuffer)?;
+                            let addr = pool.io().offset_to_phys(off).ok_or(Error::InvalidBuffer)?;
                             st.tx_allocated += 1;
                             return Ok(Some(Token::Host {
                                 addr,
@@ -604,7 +603,11 @@ impl<T: Transport, L: RawLock, const E: usize> RpmsgVirtio<T, L, E> {
                 return TxBuffer::new(self, token);
             }
             if ticks == 0 {
-                return Err(if wait { Error::Timeout } else { Error::NoBuffer });
+                return Err(if wait {
+                    Error::Timeout
+                } else {
+                    Error::NoBuffer
+                });
             }
             ticks -= 1;
             (self.opts.delay_us)(self.opts.poll_interval_us);
@@ -1032,7 +1035,10 @@ impl<'a, T: Transport, L: RawLock, const E: usize> TxBuffer<'a, T, L, E> {
             Some(end) if end <= self.capacity() => {}
             _ => return Err(Error::MessageTooLarge),
         }
-        Ok(self.dev.shm.write_bytes(self.offset + HDR_SIZE + at, data)?)
+        Ok(self
+            .dev
+            .shm
+            .write_bytes(self.offset + HDR_SIZE + at, data)?)
     }
 
     /// The payload area, for building a message in place.

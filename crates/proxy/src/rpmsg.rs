@@ -7,6 +7,9 @@ use openamp_virtio::Transport;
 
 use crate::Channel;
 
+/// Callback for traffic that is not a proxy reply.
+type OtherFn<'a, 'b, T, L, const E: usize> = &'a mut dyn FnMut(&Received<'b, T, L, E>);
+
 /// A proxy channel on an rpmsg endpoint.
 ///
 /// While waiting for a reply, the channel drains the device: messages for
@@ -17,7 +20,7 @@ pub struct RpmsgChannel<'a, T: Transport, L: RawLock, const E: usize> {
     dev: &'a RpmsgVirtio<T, L, E>,
     ept: Endpoint,
     idle: fn(),
-    on_other: Option<&'a mut dyn FnMut(&Received<'_, T, L, E>)>,
+    on_other: Option<OtherFn<'a, 'a, T, L, E>>,
 }
 
 impl<'a, T: Transport, L: RawLock, const E: usize> RpmsgChannel<'a, T, L, E> {
@@ -33,7 +36,7 @@ impl<'a, T: Transport, L: RawLock, const E: usize> RpmsgChannel<'a, T, L, E> {
     }
 
     /// Passes traffic not meant for the proxy to `f` instead of dropping it.
-    pub fn on_other(mut self, f: &'a mut dyn FnMut(&Received<'_, T, L, E>)) -> Self {
+    pub fn on_other(mut self, f: OtherFn<'a, 'a, T, L, E>) -> Self {
         self.on_other = Some(f);
         self
     }

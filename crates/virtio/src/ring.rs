@@ -157,7 +157,11 @@ mod tests {
         }
         for &(num, align) in &[(1, 4), (16, 16), (256, 4096), (512, 4096), (64, 64)] {
             let l = VringLayout::new(num as u16, align).unwrap();
-            assert_eq!(l.size(), c_vring_size(num, align), "num={num} align={align}");
+            assert_eq!(
+                l.size(),
+                c_vring_size(num, align),
+                "num={num} align={align}"
+            );
         }
         let l = VringLayout::new(256, 4096).unwrap();
         assert_eq!(l.avail(), 4096);

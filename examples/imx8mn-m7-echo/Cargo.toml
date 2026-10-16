@@ -1,0 +1,31 @@
+[package]
+name = "imx8mn-m7-echo"
+description = "rpmsg echo firmware for the Cortex-M7 of an i.MX 8M Nano, driven by Linux remoteproc"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+publish = false
+
+# Standalone: builds for thumbv7em-none-eabihf, outside the host workspace.
+[workspace]
+
+[dependencies]
+openamp-metal = { path = "../../crates/metal", features = ["cortex-m7"] }
+openamp-virtio = { path = "../../crates/virtio", default-features = false }
+openamp-rpmsg = { path = "../../crates/rpmsg" }
+openamp-remoteproc = { path = "../../crates/remoteproc" }
+
+[[bin]]
+name = "imx8mn-m7-echo"
+test = false
+bench = false
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+debug = true
+codegen-units = 1

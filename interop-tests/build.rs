@@ -91,7 +91,10 @@ fn main() {
     );
 
     println!("cargo:rustc-link-search=native={}", out.display());
-    println!("cargo:rustc-link-search=native={}", inst.join("lib").display());
+    println!(
+        "cargo:rustc-link-search=native={}",
+        inst.join("lib").display()
+    );
     for l in ["interop_glue", "open_amp", "metal", "sysfs"] {
         println!("cargo:rustc-link-lib=static={l}");
     }

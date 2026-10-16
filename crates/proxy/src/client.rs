@@ -110,7 +110,14 @@ impl<C: Channel> ProxyClient<C> {
             return Err(Error::Protocol);
         }
         let mut resp = [0u8; SYSCALL_SIZE];
-        let (r, _) = self.call(OPEN_SYSCALL_ID, flags, mode, path.as_bytes(), true, &mut resp)?;
+        let (r, _) = self.call(
+            OPEN_SYSCALL_ID,
+            flags,
+            mode,
+            path.as_bytes(),
+            true,
+            &mut resp,
+        )?;
         Ok(r.int_field1)
     }
 
@@ -130,7 +137,14 @@ impl<C: Channel> ProxyClient<C> {
         let max = MAX_BUF_LEN - SYSCALL_SIZE - nul as usize;
         let data = &data[..data.len().min(max)];
         let mut resp = [0u8; SYSCALL_SIZE];
-        let (r, _) = self.call(WRITE_SYSCALL_ID, fd, data.len() as i32, data, nul, &mut resp)?;
+        let (r, _) = self.call(
+            WRITE_SYSCALL_ID,
+            fd,
+            data.len() as i32,
+            data,
+            nul,
+            &mut resp,
+        )?;
         Ok(r.int_field1 as usize)
     }
 
@@ -172,7 +186,9 @@ pub struct Stdout<'a, C: Channel> {
 
 impl<C: Channel> fmt::Write for Stdout<'_, C> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.client.write_all(1, s.as_bytes()).map_err(|_| fmt::Error)
+        self.client
+            .write_all(1, s.as_bytes())
+            .map_err(|_| fmt::Error)
     }
 }
 
@@ -219,7 +235,10 @@ mod tests {
         assert_eq!(c.open("log.txt", 0x201, 0o644), Ok(5));
         let req = &c.ch.reqs[0];
         let h = Syscall::from_bytes(req).unwrap();
-        assert_eq!((h.id, h.int_field1, h.int_field2, h.data_len), (1, 0x201, 0o644, 8));
+        assert_eq!(
+            (h.id, h.int_field1, h.int_field2, h.data_len),
+            (1, 0x201, 0o644, 8)
+        );
         assert_eq!(&req[16..], b"log.txt\0");
     }
 

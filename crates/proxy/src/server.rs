@@ -13,12 +13,12 @@ use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
 use std::vec::Vec;
 
+use crate::MAX_BUF_LEN;
 use crate::flags::{O_ACCMODE, O_APPEND, O_CREAT, O_EXCL, O_RDONLY, O_RDWR, O_TRUNC, O_WRONLY};
 use crate::wire::{
     CLOSE_SYSCALL_ID, OPEN_SYSCALL_ID, READ_SYSCALL_ID, SYSCALL_SIZE, Syscall, TERM_SYSCALL_ID,
     WRITE_SYSCALL_ID,
 };
-use crate::MAX_BUF_LEN;
 
 const EBADF: i32 = 9;
 const EACCES: i32 = 13;
@@ -169,8 +169,14 @@ impl ProxyServer {
 
     fn write(&mut self, fd: i32, data: &[u8]) -> i32 {
         let r = match fd {
-            1 => self.stdout.write_all(data).and_then(|_| self.stdout.flush()),
-            2 => self.stderr.write_all(data).and_then(|_| self.stderr.flush()),
+            1 => self
+                .stdout
+                .write_all(data)
+                .and_then(|_| self.stdout.flush()),
+            2 => self
+                .stderr
+                .write_all(data)
+                .and_then(|_| self.stderr.flush()),
             fd => match self.files.get_mut(&fd) {
                 Some(f) => f.write_all(data),
                 None => return -EBADF,
@@ -271,7 +277,8 @@ mod tests {
     }
 
     fn tmpdir(tag: &str) -> PathBuf {
-        let d = std::env::temp_dir().join(std::format!("openamp-proxy-{tag}-{}", std::process::id()));
+        let d =
+            std::env::temp_dir().join(std::format!("openamp-proxy-{tag}-{}", std::process::id()));
         std::fs::create_dir_all(&d).unwrap();
         d
     }
@@ -287,7 +294,9 @@ mod tests {
             Box::new(io::sink()),
         );
         let mut c = ProxyClient::new(Direct(&mut srv));
-        let fd = c.open("/data.txt", O_WRONLY | O_CREAT | O_TRUNC, 0o644).unwrap();
+        let fd = c
+            .open("/data.txt", O_WRONLY | O_CREAT | O_TRUNC, 0o644)
+            .unwrap();
         c.write_all(fd, b"remote wrote this").unwrap();
         c.close(fd).unwrap();
         let fd = c.open("data.txt", O_RDONLY, 0).unwrap();
@@ -296,7 +305,10 @@ mod tests {
         assert_eq!(&buf[..n], b"remote wrote this");
         c.close(fd).unwrap();
         assert!(matches!(c.close(fd), Err(crate::Error::Remote(-9))));
-        assert!(matches!(c.open("missing", O_RDONLY, 0), Err(crate::Error::Remote(-2))));
+        assert!(matches!(
+            c.open("missing", O_RDONLY, 0),
+            Err(crate::Error::Remote(-2))
+        ));
         assert!(matches!(
             c.open("../escape", O_WRONLY | O_CREAT, 0),
             Err(crate::Error::Remote(-13))

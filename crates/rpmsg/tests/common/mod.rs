@@ -80,7 +80,10 @@ impl Transport for Sim {
         self.sh.io.load_u8(STATUS, Ordering::Acquire).unwrap()
     }
     fn set_status(&self, status: u8) {
-        self.sh.io.store_u8(STATUS, status, Ordering::Release).unwrap()
+        self.sh
+            .io
+            .store_u8(STATUS, status, Ordering::Release)
+            .unwrap()
     }
     fn device_features(&self) -> u64 {
         self.sh.io.read_u32(DFEATURES).unwrap() as u64

@@ -214,7 +214,8 @@ impl<N: Fn(usize)> Transport for MmioTransport<N> {
             if phys % LEGACY_PAGE_SIZE as u64 != 0 {
                 return Err(Error::BadLayout);
             }
-            let pfn = u32::try_from(phys / LEGACY_PAGE_SIZE as u64).map_err(|_| Error::BadLayout)?;
+            let pfn =
+                u32::try_from(phys / LEGACY_PAGE_SIZE as u64).map_err(|_| Error::BadLayout)?;
             r.write_u32(regs::QUEUE_ALIGN, cfg.layout.align() as u32)?;
             r.write_u32(regs::QUEUE_PFN, pfn)?;
         } else {
@@ -250,7 +251,8 @@ mod tests {
         let r = IoRegion::alloc(0x200, 0x0a00_0000);
         r.write_u32(regs::MAGIC, MAGIC_VALUE).unwrap();
         r.write_u32(regs::VERSION, version).unwrap();
-        r.write_u32(regs::DEVICE_ID, crate::VIRTIO_ID_RPMSG).unwrap();
+        r.write_u32(regs::DEVICE_ID, crate::VIRTIO_ID_RPMSG)
+            .unwrap();
         r.write_u32(regs::DEVICE_FEATURES, 1).unwrap();
         r.write_u32(regs::QUEUE_NUM_MAX, 256).unwrap();
         r.write_u8(regs::CONFIG + 2, 0x42).unwrap();

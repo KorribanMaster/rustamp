@@ -1,0 +1,19 @@
+openamp-rs is a Rust port of the OpenAMP C libraries open-amp
+(https://github.com/OpenAMP/open-amp) and libmetal
+(https://github.com/OpenAMP/libmetal). It follows their design, protocol
+behaviour and wire formats, so portions of it are derivative works of:
+
+open-amp, BSD-3-Clause:
+  Copyright (c) 2014, Mentor Graphics Corporation. All rights reserved.
+  Copyright (c) 2015 - 2016 Xilinx, Inc. All rights reserved.
+  Copyright (c) 2016 Freescale Semiconductor, Inc. All rights reserved.
+  and the open-amp contributors.
+
+libmetal, BSD-3-Clause:
+  Copyright (c) 2015, Xilinx Inc. and Contributors. All rights reserved.
+
+The AtomicWaker algorithm in crates/metal/src/sync.rs follows
+futures::task::AtomicWaker (MIT OR Apache-2.0, the futures-rs authors).
+
+interop-tests/ builds and links the unmodified C libraries for testing; they
+are fetched separately and are not distributed with this repository.

@@ -51,7 +51,9 @@ fn name_service_binding_and_messaging() {
     // Host posted all receive buffers and kicked queue 0 once.
     assert_eq!(sh.kicks[0].load(std::sync::atomic::Ordering::SeqCst), 1);
 
-    let r_ep = remote.create_endpoint("rpmsg-svc", ADDR_ANY, ADDR_ANY).unwrap();
+    let r_ep = remote
+        .create_endpoint("rpmsg-svc", ADDR_ANY, ADDR_ANY)
+        .unwrap();
     assert_eq!(r_ep.addr(), 1024);
     let ev = expect_ns(&host);
     assert_eq!((ev.name, ev.addr, ev.kind).1, 1024);
@@ -59,7 +61,9 @@ fn name_service_binding_and_messaging() {
     assert_eq!(ev.kind, NsKind::Create);
 
     // Bind a host endpoint to the announced service: no announcement back.
-    let h_ep = host.create_endpoint("rpmsg-svc", ADDR_ANY, ev.addr).unwrap();
+    let h_ep = host
+        .create_endpoint("rpmsg-svc", ADDR_ANY, ev.addr)
+        .unwrap();
     assert!(host.is_ready(h_ep));
     assert!(!remote.is_ready(r_ep));
 
@@ -223,7 +227,9 @@ fn threaded_echo(dfeatures: u32) {
             ..Options::default()
         };
         let dev = Dev::new_remote(sh2.remote(), sh2.io.clone(), opts).unwrap();
-        let ep = dev.create_endpoint("rpmsg-echo", ADDR_ANY, ADDR_ANY).unwrap();
+        let ep = dev
+            .create_endpoint("rpmsg-echo", ADDR_ANY, ADDR_ANY)
+            .unwrap();
         loop {
             match dev.try_recv().unwrap() {
                 Some(Received::Message(m)) => {
@@ -241,15 +247,23 @@ fn threaded_echo(dfeatures: u32) {
         delay_us: |_| std::thread::yield_now(),
         ..Options::default()
     };
-    let host = Dev::new_host(sh.host(), sh.io.clone(), sh.pool(), HostConfig::default(), opts)
-        .unwrap();
+    let host = Dev::new_host(
+        sh.host(),
+        sh.io.clone(),
+        sh.pool(),
+        HostConfig::default(),
+        opts,
+    )
+    .unwrap();
     let ev = loop {
         if let Some(Received::NameService(ev)) = host.try_recv().unwrap() {
             break ev;
         }
         std::thread::yield_now();
     };
-    let ep = host.create_endpoint("rpmsg-echo", ADDR_ANY, ev.addr).unwrap();
+    let ep = host
+        .create_endpoint("rpmsg-echo", ADDR_ANY, ev.addr)
+        .unwrap();
 
     const N: u32 = 100_000;
     let (mut sent, mut got) = (0u32, 0u32);

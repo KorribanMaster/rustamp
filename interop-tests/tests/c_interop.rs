@@ -42,9 +42,8 @@ fn rust_host_c_remote() {
     let va = io.as_ptr() as usize;
     // SAFETY: the C remote uses the buffer only through libmetal for the
     // duration of the call; the region is leaked, so it outlives the thread.
-    let remote = std::thread::spawn(move || unsafe {
-        c_remote_run(va as *mut _, SHM_PHYS, SHM_SIZE)
-    });
+    let remote =
+        std::thread::spawn(move || unsafe { c_remote_run(va as *mut _, SHM_PHYS, SHM_SIZE) });
 
     let kicks = Arc::new(AtomicU32::new(0));
     let k = kicks.clone();
@@ -91,9 +90,8 @@ fn c_host_rust_remote() {
     let (io, table) = shared_memory();
     let va = io.as_ptr() as usize;
     // SAFETY: as above.
-    let host = std::thread::spawn(move || unsafe {
-        c_host_run(va as *mut _, SHM_PHYS, SHM_SIZE, N)
-    });
+    let host =
+        std::thread::spawn(move || unsafe { c_host_run(va as *mut _, SHM_PHYS, SHM_SIZE, N) });
 
     let transport = RprocVirtio::new_device(table.find_vdev(0).unwrap(), io.clone(), |_id: u32| {});
     let remote: RpmsgVirtio<_> = RpmsgVirtio::new_remote(transport, io, yield_opts()).unwrap();

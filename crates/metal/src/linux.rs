@@ -10,13 +10,13 @@
 //! in `read(2)` and [`UioDevice::enable_irq`] re-arms the line with
 //! `write(2)`. For event loops, poll [`UioDevice::as_raw_fd`].
 
+use std::format;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::os::fd::{AsRawFd, RawFd};
 use std::path::{Path, PathBuf};
 use std::string::{String, ToString};
 use std::vec::Vec;
-use std::format;
 
 use crate::{Error, IoRegion, Result};
 
@@ -253,9 +253,7 @@ impl UioDevice {
 
     /// Re-enables the interrupt (writes `1` to the device).
     pub fn enable_irq(&self) -> Result<()> {
-        (&self.file)
-            .write_all(&1u32.to_ne_bytes())
-            .map_err(io_err)
+        (&self.file).write_all(&1u32.to_ne_bytes()).map_err(io_err)
     }
 
     /// Blocks until the next interrupt; returns the kernel's event count.

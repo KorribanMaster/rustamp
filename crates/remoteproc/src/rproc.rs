@@ -257,10 +257,7 @@ impl<O: RemoteprocOps> Remoteproc<O> {
 
     /// Stops the remote (`remoteproc_stop`).
     pub fn stop(&mut self) -> Result<()> {
-        if !matches!(
-            self.state,
-            State::Running | State::Suspended | State::Error
-        ) {
+        if !matches!(self.state, State::Running | State::Suspended | State::Error) {
             return Err(Error::InvalidState);
         }
         self.ops.stop()?;

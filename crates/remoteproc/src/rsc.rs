@@ -478,7 +478,11 @@ impl ResourceTable {
         let num_vrings = self.io.read_u8(e.offset + 25)?;
         let config_len = self.io.read_u32(e.offset + 20)?;
         let size = VDEV_HDR + VRING_SIZE * num_vrings as usize;
-        self.need(e, size.checked_add(config_len as usize).ok_or(Error::InvalidTable)?)?;
+        self.need(
+            e,
+            size.checked_add(config_len as usize)
+                .ok_or(Error::InvalidTable)?,
+        )?;
         Ok(VdevRsc {
             io: self.io.clone(),
             off: e.offset,
@@ -556,7 +560,9 @@ impl VdevRsc {
 
     /// Virtio status.
     pub fn status(&self) -> u8 {
-        self.io.load_u8(self.off + 24, Ordering::Acquire).unwrap_or(0)
+        self.io
+            .load_u8(self.off + 24, Ordering::Acquire)
+            .unwrap_or(0)
     }
 
     /// Writes the virtio status.
@@ -658,13 +664,22 @@ mod tests {
     #[test]
     fn malformed_tables_are_rejected() {
         let io = IoRegion::alloc(256, 0);
-        assert_eq!(ResourceTable::new(io.clone(), 0, 64).unwrap_err(), Error::InvalidTable); // ver 0
+        assert_eq!(
+            ResourceTable::new(io.clone(), 0, 64).unwrap_err(),
+            Error::InvalidTable
+        ); // ver 0
         io.write_u32(0, 1).unwrap();
         io.write_u32(4, 100).unwrap(); // too many entries
-        assert_eq!(ResourceTable::new(io.clone(), 0, 64).unwrap_err(), Error::InvalidTable);
+        assert_eq!(
+            ResourceTable::new(io.clone(), 0, 64).unwrap_err(),
+            Error::InvalidTable
+        );
         io.write_u32(4, 1).unwrap();
         io.write_u32(16, 64).unwrap(); // entry offset past the end
-        assert_eq!(ResourceTable::new(io.clone(), 0, 64).unwrap_err(), Error::InvalidTable);
+        assert_eq!(
+            ResourceTable::new(io.clone(), 0, 64).unwrap_err(),
+            Error::InvalidTable
+        );
         io.write_u32(16, 24).unwrap();
         io.write_u32(24, RSC_VDEV).unwrap();
         io.write_u8(24 + 25, 200).unwrap(); // 200 vrings cannot fit

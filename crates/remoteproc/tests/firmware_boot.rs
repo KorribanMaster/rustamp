@@ -206,11 +206,17 @@ fn corrupt_images_are_rejected() {
     let mut img = firmware_image();
     assert_eq!(rp.load(&mut &img[..40]).unwrap_err(), Error::InvalidImage);
     img[5] = 2; // big-endian
-    assert_eq!(rp.load(&mut img.as_slice()).unwrap_err(), Error::UnsupportedImage);
+    assert_eq!(
+        rp.load(&mut img.as_slice()).unwrap_err(),
+        Error::UnsupportedImage
+    );
     img[5] = 1;
     // Program header claims a segment far past the end of the file.
     img[52 + 4..52 + 8].copy_from_slice(&0x0fff_0000u32.to_le_bytes());
-    assert_eq!(rp.load(&mut img.as_slice()).unwrap_err(), Error::InvalidImage);
+    assert_eq!(
+        rp.load(&mut img.as_slice()).unwrap_err(),
+        Error::InvalidImage
+    );
 }
 
 #[test]

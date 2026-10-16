@@ -126,8 +126,8 @@ impl IoRegion {
     /// are two threads sharing this memory.
     #[cfg(feature = "alloc")]
     pub fn alloc(size: usize, phys: u64) -> Self {
-        let layout = core::alloc::Layout::from_size_align(size.max(1), 4096)
-            .expect("invalid IoRegion size");
+        let layout =
+            core::alloc::Layout::from_size_align(size.max(1), 4096).expect("invalid IoRegion size");
         // SAFETY: the layout has a non-zero size.
         let p = unsafe { alloc::alloc::alloc_zeroed(layout) };
         if p.is_null() {

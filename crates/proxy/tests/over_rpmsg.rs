@@ -35,7 +35,14 @@ fn printf_and_files_through_the_proxy() {
         ..Options::default()
     };
     let host = Arc::new(
-        Dev::new_host(sh.host(), sh.io.clone(), sh.pool(), HostConfig::default(), opts).unwrap(),
+        Dev::new_host(
+            sh.host(),
+            sh.io.clone(),
+            sh.pool(),
+            HostConfig::default(),
+            opts,
+        )
+        .unwrap(),
     );
     let remote = Dev::try_new_remote(sh.remote(), sh.io.clone(), opts).unwrap();
 
