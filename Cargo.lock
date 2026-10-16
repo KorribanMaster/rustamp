@@ -13,6 +13,11 @@ version = "0.1.0"
 [[package]]
 name = "openamp-remoteproc"
 version = "0.1.0"
+dependencies = [
+ "openamp-metal",
+ "openamp-rpmsg",
+ "openamp-virtio",
+]
 
 [[package]]
 name = "openamp-rpmsg"

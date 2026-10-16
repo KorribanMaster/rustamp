@@ -1,4 +1,31 @@
 [package]
 name = "openamp-remoteproc"
-version = "0.1.0"
-edition = "2024"
+description = "Remote processor lifecycle, ELF loading, resource tables and virtio transport for OpenAMP in Rust"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[features]
+default = []
+# `ImageStore` for files.
+std = ["openamp-metal/std"]
+
+[dependencies]
+openamp-metal.workspace = true
+openamp-virtio.workspace = true
+
+[dev-dependencies]
+openamp-metal = { workspace = true, features = ["std"] }
+openamp-rpmsg.workspace = true
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
