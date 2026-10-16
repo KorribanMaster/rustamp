@@ -1,0 +1,32 @@
+[package]
+name = "openamp-rpmsg"
+description = "RPMsg inter-processor messaging over virtio, compatible with Linux and OpenAMP"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[features]
+default = []
+# `async fn recv`/`send` on top of the polled API, for Embassy, RTIC or any
+# executor. Wake tasks by calling `RpmsgVirtio::on_notify` from the
+# notification interrupt.
+async = []
+
+[dependencies]
+openamp-metal.workspace = true
+openamp-virtio.workspace = true
+
+[dev-dependencies]
+openamp-metal = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true

@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/metal",
+    "crates/virtio",
+    "crates/rpmsg",
+    "crates/remoteproc",
+    "crates/proxy",
+]
+# Firmware examples build for bare-metal targets and live outside the
+# host workspace; the C interop harness is opt-in (needs cmake + a C compiler).
+exclude = ["examples/imx8mn-m7-echo", "interop-tests"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "BSD-3-Clause"
+repository = "https://github.com/KorribanMaster/openamp-rs"
+authors = ["Eicke Hecht <eicke.hecht@gmail.com>"]
+keywords = ["openamp", "rpmsg", "remoteproc", "virtio", "amp"]
+categories = ["embedded", "no-std", "hardware-support"]
+
+[workspace.dependencies]
+openamp-metal = { path = "crates/metal", version = "0.1.0", default-features = false }
+openamp-virtio = { path = "crates/virtio", version = "0.1.0", default-features = false }
+openamp-rpmsg = { path = "crates/rpmsg", version = "0.1.0", default-features = false }
+openamp-remoteproc = { path = "crates/remoteproc", version = "0.1.0", default-features = false }
+openamp-proxy = { path = "crates/proxy", version = "0.1.0", default-features = false }
+
+[workspace.lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "warn"
+unreachable_pub = "warn"
+
+[workspace.lints.clippy]
+undocumented_unsafe_blocks = "warn"

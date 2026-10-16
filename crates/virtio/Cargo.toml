@@ -1,0 +1,26 @@
+[package]
+name = "openamp-virtio"
+description = "Virtio split virtqueues (driver and device roles) and transports for OpenAMP in Rust"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[features]
+default = ["mmio"]
+# virtio-mmio transport (driver side).
+mmio = []
+
+[dependencies]
+openamp-metal.workspace = true
+
+[dev-dependencies]
+openamp-metal = { workspace = true, features = ["std"] }
+
+[lints]
+workspace = true

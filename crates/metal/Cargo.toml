@@ -1,0 +1,30 @@
+[package]
+name = "openamp-metal"
+description = "Hardware and OS abstraction layer for OpenAMP in Rust (a port of libmetal)"
+readme = "README.md"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[features]
+default = []
+# Heap-backed helpers (IoRegion::alloc) for host-side simulation and tests.
+alloc = []
+# std helpers (thread-sleeping delay, std error impls).
+std = ["alloc"]
+# Linux userspace backend: UIO devices and shared-memory files via mmap.
+linux = ["std"]
+# Cache maintenance for the core this crate is compiled for.
+cortex-m7 = []
+armv7a = []
+
+[lints]
+workspace = true
+
+[package.metadata.docs.rs]
+all-features = true
