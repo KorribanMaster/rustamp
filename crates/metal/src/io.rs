@@ -133,6 +133,15 @@ impl IoRegion {
         if p.is_null() {
             alloc::alloc::handle_alloc_error(layout);
         }
+        // The leak is intentional; tell Miri's leak checker so.
+        #[cfg(miri)]
+        {
+            unsafe extern "Rust" {
+                fn miri_static_root(ptr: *const u8);
+            }
+            // SAFETY: Miri-provided hook; `p` is a live heap allocation.
+            unsafe { miri_static_root(p) };
+        }
         // SAFETY: freshly allocated, zeroed, never freed (leaked), and only
         // ever accessed through this region.
         unsafe { IoRegion::new(p, phys, size) }

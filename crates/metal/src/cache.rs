@@ -156,8 +156,11 @@ mod tests {
 
     #[test]
     fn line_iteration_covers_range() {
-        let v: Vec<usize> = super::lines(0x1004 as *const u8, 0x40, 32).collect();
+        let v: Vec<usize> = super::lines(core::ptr::without_provenance(0x1004), 0x40, 32).collect();
         assert_eq!(v, vec![0x1000, 0x1020, 0x1040]);
-        assert_eq!(super::lines(0x1000 as *const u8, 0, 32).count(), 0);
+        assert_eq!(
+            super::lines(core::ptr::without_provenance(0x1000), 0, 32).count(),
+            0
+        );
     }
 }

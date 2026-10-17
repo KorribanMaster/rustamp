@@ -94,10 +94,12 @@ jobs:
 
   miri:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri
-      - run: cargo miri test -p openamp-metal -p openamp-virtio --all-features --lib
+      # Isolation is off because the proxy tests use a temporary directory.
+      - run: cargo miri test --workspace --all-features
+        env:
+          MIRIFLAGS: -Zmiri-disable-isolation

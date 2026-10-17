@@ -6,7 +6,7 @@
 //! wakes a task). This module only defines the controller interface and a
 //! dispatch table for platforms that want libmetal-style registration.
 
-use core::sync::atomic::{AtomicPtr, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 /// Enables and disables interrupt lines.
 pub trait IrqController {
@@ -24,7 +24,7 @@ pub type IrqHandler = fn(irq: u32, arg: *mut ());
 /// Registration and dispatch are lock-free, so [`IrqTable::dispatch`] may be
 /// called from an interrupt handler while thread code registers.
 pub struct IrqTable<const N: usize> {
-    handlers: [AtomicUsize; N],
+    handlers: [AtomicPtr<()>; N],
     args: [AtomicPtr<()>; N],
 }
 
@@ -32,7 +32,7 @@ impl<const N: usize> IrqTable<N> {
     /// An empty table.
     pub const fn new() -> Self {
         IrqTable {
-            handlers: [const { AtomicUsize::new(0) }; N],
+            handlers: [const { AtomicPtr::new(core::ptr::null_mut()) }; N],
             args: [const { AtomicPtr::new(core::ptr::null_mut()) }; N],
         }
     }
@@ -43,16 +43,16 @@ impl<const N: usize> IrqTable<N> {
         if i >= N {
             return Err(crate::Error::InvalidParam);
         }
-        self.handlers[i].store(0, Ordering::Release);
+        self.handlers[i].store(core::ptr::null_mut(), Ordering::Release);
         self.args[i].store(arg, Ordering::Release);
-        self.handlers[i].store(handler as usize, Ordering::Release);
+        self.handlers[i].store(handler as *mut (), Ordering::Release);
         Ok(())
     }
 
     /// Removes the handler for `irq`.
     pub fn unregister(&self, irq: u32) {
         if let Some(h) = self.handlers.get(irq as usize) {
-            h.store(0, Ordering::Release);
+            h.store(core::ptr::null_mut(), Ordering::Release);
         }
     }
 
@@ -63,13 +63,13 @@ impl<const N: usize> IrqTable<N> {
             return false;
         };
         let f = h.load(Ordering::Acquire);
-        if f == 0 {
+        if f.is_null() {
             return false;
         }
         let arg = self.args[i].load(Ordering::Acquire);
-        // SAFETY: non-zero values are only ever stored from an `IrqHandler`
-        // in `register`.
-        let f: IrqHandler = unsafe { core::mem::transmute::<usize, IrqHandler>(f) };
+        // SAFETY: non-null values are only ever stored from an `IrqHandler`
+        // in `register`, and the pointer keeps that function's provenance.
+        let f: IrqHandler = unsafe { core::mem::transmute::<*mut (), IrqHandler>(f) };
         f(irq, arg);
         true
     }
@@ -97,7 +97,8 @@ mod tests {
     fn register_and_dispatch() {
         let t: IrqTable<4> = IrqTable::new();
         assert!(!t.dispatch(2));
-        t.register(2, handler, 0x55 as *mut ()).unwrap();
+        t.register(2, handler, core::ptr::without_provenance_mut(0x55))
+            .unwrap();
         assert!(t.dispatch(2));
         assert_eq!(HITS.load(Ordering::Relaxed), 2);
         t.unregister(2);

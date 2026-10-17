@@ -265,7 +265,8 @@ fn threaded_echo(dfeatures: u32) {
         .create_endpoint("rpmsg-echo", ADDR_ANY, ev.addr)
         .unwrap();
 
-    const N: u32 = 100_000;
+    // Miri is ~1000x slower; a short run still exercises both threads.
+    const N: u32 = if cfg!(miri) { 300 } else { 100_000 };
     let (mut sent, mut got) = (0u32, 0u32);
     let msg = |i: u32| {
         let len = 4 + (i as usize * 7) % 492;

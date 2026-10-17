@@ -7,7 +7,7 @@
 //! firmware, forward to RTT, a UART or `defmt`.
 
 use core::fmt::Arguments;
-use core::sync::atomic::{AtomicU8, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicPtr, AtomicU8, Ordering};
 
 /// Severity of a log message.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -26,12 +26,12 @@ pub enum Level {
 /// A log handler.
 pub type Handler = fn(Level, Arguments<'_>);
 
-static HANDLER: AtomicUsize = AtomicUsize::new(0);
+static HANDLER: AtomicPtr<()> = AtomicPtr::new(core::ptr::null_mut());
 static MAX_LEVEL: AtomicU8 = AtomicU8::new(Level::Warn as u8);
 
 /// Installs the log handler.
 pub fn set_handler(handler: Handler) {
-    HANDLER.store(handler as usize, Ordering::Release);
+    HANDLER.store(handler as *mut (), Ordering::Release);
 }
 
 /// Sets the most verbose level that reaches the handler (default `Warn`).
@@ -46,9 +46,10 @@ pub fn __log(level: Level, args: Arguments<'_>) {
         return;
     }
     let h = HANDLER.load(Ordering::Acquire);
-    if h != 0 {
-        // SAFETY: non-zero values are only stored from a `Handler`.
-        let h: Handler = unsafe { core::mem::transmute::<usize, Handler>(h) };
+    if !h.is_null() {
+        // SAFETY: non-null values are only stored from a `Handler`, and the
+        // pointer keeps that function's provenance.
+        let h: Handler = unsafe { core::mem::transmute::<*mut (), Handler>(h) };
         h(level, args);
     }
 }

@@ -404,10 +404,13 @@ impl DriverQueue {
             self.ring
                 .store16(self.ring.layout.used_event(), parked, Ordering::Release)?;
         }
-        let f = self.ring.r16(self.ring.layout.avail_flags())?;
-        self.ring.w16(
+        let f = self
+            .ring
+            .load16(self.ring.layout.avail_flags(), Ordering::Relaxed)?;
+        self.ring.store16(
             self.ring.layout.avail_flags(),
             f | VRING_AVAIL_F_NO_INTERRUPT,
+            Ordering::Release,
         )
     }
 
@@ -415,10 +418,13 @@ impl DriverQueue {
     /// returned meanwhile, so the caller must process them before sleeping.
     pub fn enable_interrupts(&mut self) -> Result<bool> {
         self.interrupts = true;
-        let f = self.ring.r16(self.ring.layout.avail_flags())?;
-        self.ring.w16(
+        let f = self
+            .ring
+            .load16(self.ring.layout.avail_flags(), Ordering::Relaxed)?;
+        self.ring.store16(
             self.ring.layout.avail_flags(),
             f & !VRING_AVAIL_F_NO_INTERRUPT,
+            Ordering::Release,
         )?;
         if self.event_idx {
             self.ring.store16(
@@ -563,18 +569,28 @@ impl DeviceQueue {
             self.ring
                 .store16(self.ring.layout.avail_event(), parked, Ordering::Release)?;
         }
-        let f = self.ring.r16(self.ring.layout.used_flags())?;
-        self.ring
-            .w16(self.ring.layout.used_flags(), f | VRING_USED_F_NO_NOTIFY)
+        let f = self
+            .ring
+            .load16(self.ring.layout.used_flags(), Ordering::Relaxed)?;
+        self.ring.store16(
+            self.ring.layout.used_flags(),
+            f | VRING_USED_F_NO_NOTIFY,
+            Ordering::Release,
+        )
     }
 
     /// Asks the driver to notify again. Returns `true` if buffers were
     /// posted meanwhile.
     pub fn enable_notifications(&mut self) -> Result<bool> {
         self.notifications = true;
-        let f = self.ring.r16(self.ring.layout.used_flags())?;
-        self.ring
-            .w16(self.ring.layout.used_flags(), f & !VRING_USED_F_NO_NOTIFY)?;
+        let f = self
+            .ring
+            .load16(self.ring.layout.used_flags(), Ordering::Relaxed)?;
+        self.ring.store16(
+            self.ring.layout.used_flags(),
+            f & !VRING_USED_F_NO_NOTIFY,
+            Ordering::Release,
+        )?;
         if self.event_idx {
             self.ring.store16(
                 self.ring.layout.avail_event(),
@@ -786,7 +802,8 @@ mod tests {
     #[test]
     fn threads_exchange_a_million_buffers() {
         let (mut drv, mut dev, _) = pair(16, true);
-        const N: u64 = 200_000;
+        // Miri is ~1000x slower; a short run still exercises both threads.
+        const N: u64 = if cfg!(miri) { 500 } else { 200_000 };
         let h = std::thread::spawn(move || {
             let mut seen = 0u64;
             while seen < N {

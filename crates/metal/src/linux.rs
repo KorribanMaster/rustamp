@@ -279,6 +279,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[cfg_attr(miri, ignore = "Miri cannot mmap files")]
     fn shared_file_is_shared_between_mappings() {
         let path = std::env::temp_dir().join(format!("openamp-metal-test-{}", std::process::id()));
         let a = map_shared_file(&path, 8192).unwrap().leak(0x1000_0000);
