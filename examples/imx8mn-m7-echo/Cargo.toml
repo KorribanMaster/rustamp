@@ -15,6 +15,13 @@ openamp-virtio = { path = "../../crates/virtio", default-features = false }
 openamp-rpmsg = { path = "../../crates/rpmsg" }
 openamp-remoteproc = { path = "../../crates/remoteproc" }
 
+[features]
+# QEMU imx8mp-evk with the Cortex-M7 AMP series: the M7 shares the A53
+# physical map and boots from 0x80000000 (DDR), and the MU's B side has no
+# interrupt to the M7, so this variant links into DDR, polls the MU and logs
+# to UART4.
+qemu-imx8mp = []
+
 [[bin]]
 name = "imx8mn-m7-echo"
 test = false
@@ -29,3 +36,4 @@ opt-level = "s"
 lto = true
 debug = true
 codegen-units = 1
+

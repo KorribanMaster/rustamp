@@ -22,6 +22,9 @@
 
 mod mu;
 mod rt;
+#[cfg(feature = "qemu-imx8mp")]
+#[macro_use]
+mod uart;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
@@ -58,15 +61,37 @@ static MU: Mu = Mu::new(MU_B_BASE);
 
 /// Busy-wait delay at the M7's 600 MHz (roughly; only paces polling).
 fn delay_us(us: u32) {
+    // Without an MU interrupt (QEMU), keep draining kicks while waiting so
+    // the host's mailbox TX never stalls.
+    #[cfg(feature = "qemu-imx8mp")]
+    while MU.try_recv().is_some() {}
     rt::delay_cycles(us.saturating_mul(600));
+}
+
+/// Logs to UART4 in the QEMU build; compiled out otherwise.
+#[cfg(not(feature = "qemu-imx8mp"))]
+macro_rules! log {
+    ($($t:tt)*) => {{
+        if false {
+            let _ = format_args!($($t)*);
+        }
+    }};
 }
 
 /// Called by the reset code once memory is initialised.
 pub(crate) extern "C" fn main() -> ! {
-    mpu_uncached_shared_memory();
-    MU.enable_rx_irq();
-    // SAFETY: the MU handler only touches an atomic flag.
-    unsafe { nvic_unmask(MU_IRQ) };
+    #[cfg(feature = "qemu-imx8mp")]
+    {
+        uart::init();
+        log!("openamp-rs m7: up, waiting for the host (DRIVER_OK)");
+    }
+    #[cfg(not(feature = "qemu-imx8mp"))]
+    {
+        mpu_uncached_shared_memory();
+        MU.enable_rx_irq();
+        // SAFETY: the MU handler only touches an atomic flag.
+        unsafe { nvic_unmask(MU_IRQ) };
+    }
 
     // SAFETY: the shared region is reserved for rpmsg in the device tree
     // and only accessed through this region on the M7 side.
@@ -83,19 +108,35 @@ pub(crate) extern "C" fn main() -> ! {
     // Blocks until Linux has probed virtio_rpmsg and set DRIVER_OK.
     let rpmsg: RpmsgVirtio<_, RawSpinLock, 4> =
         RpmsgVirtio::new_remote(transport, shm, opts).expect("rpmsg");
+    log!("openamp-rs m7: DRIVER_OK, ns={}", rpmsg.support_ns());
     let ept = rpmsg
         .create_endpoint(SERVICE, ADDR_ANY, ADDR_ANY)
         .expect("endpoint");
+    log!("openamp-rs m7: announced {} at {:#x}", SERVICE, ept.addr());
 
+    let mut echoed: u32 = 0;
+    let mut bytes: u64 = 0;
     loop {
         while let Ok(Some(r)) = rpmsg.try_recv() {
             if let Received::Message(m) = r {
+                if echoed == 0 {
+                    log!("openamp-rs m7: first message from {:#x}", m.src());
+                }
                 // The first message also binds `ept` to the tty's address.
-                let _ = rpmsg.send_to(ept, m.src(), m.data());
+                if rpmsg.send_to(ept, m.src(), m.data()).is_ok() {
+                    echoed += 1;
+                    bytes += m.len() as u64;
+                    if echoed % 500 == 0 {
+                        log!("openamp-rs m7: echoed {} messages, {} bytes", echoed, bytes);
+                    }
+                }
             }
         }
+        #[cfg(feature = "qemu-imx8mp")]
+        while MU.try_recv().is_some() {}
         // Sleep until the next kick; checking the flag with interrupts
         // masked closes the race with the handler.
+        #[cfg(not(feature = "qemu-imx8mp"))]
         rt::sleep_unless(|| KICKED.swap(false, Ordering::AcqRel));
     }
 }
@@ -113,6 +154,7 @@ pub(crate) fn on_irq(irq: u16) {
 /// # Safety
 ///
 /// The interrupt's handler must be sound to run at any time.
+#[cfg_attr(feature = "qemu-imx8mp", allow(dead_code))]
 unsafe fn nvic_unmask(irq: u16) {
     let iser = (0xE000_E100 + 4 * (irq as usize / 32)) as *mut u32;
     // SAFETY: architecturally defined NVIC register; writes of 1 set only
@@ -123,6 +165,7 @@ unsafe fn nvic_unmask(irq: u16) {
 /// Marks the 16 MiB around the rpmsg region (0x55000000..0x56000000) as
 /// normal, shareable, non-cacheable, execute-never in MPU region 0, and
 /// enables the MPU with the default map for everything else.
+#[cfg_attr(feature = "qemu-imx8mp", allow(dead_code))]
 fn mpu_uncached_shared_memory() {
     const MPU_TYPE: *const u32 = 0xE000_ED90 as *const u32;
     const MPU_CTRL: *mut u32 = 0xE000_ED94 as *mut u32;

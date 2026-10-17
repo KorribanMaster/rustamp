@@ -3,6 +3,9 @@
 //! entry. Kept in-tree so the example has no dependencies beyond the
 //! openamp crates; `cortex-m-rt` works just as well.
 
+// The QEMU build polls the MU and never sleeps on an interrupt.
+#![cfg_attr(feature = "qemu-imx8mp", allow(dead_code))]
+
 use core::arch::{asm, naked_asm};
 
 /// Number of device interrupts in the vector table (i.MX 8M Nano M7 has

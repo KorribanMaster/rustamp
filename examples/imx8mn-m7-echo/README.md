@@ -6,8 +6,10 @@ Linux creates `/dev/ttyRPMSG0`; everything written there is echoed back.
 
 The firmware has no dependencies beyond the openamp crates: `src/rt.rs` is a
 minimal Cortex-M7 runtime (vector table, reset, interrupt entry) and
-`link.x` the linker script. It builds and links to about 10 KB of code; it has
-not yet been run on hardware. Register addresses (MU1 B side `0x30AB0000`,
+`link.x` the linker script. It builds and links to about 10 KB of code. It
+has not been run on hardware yet. It does run under QEMU's `imx8mp-evk`
+(i.MX 8M Plus, same M7 memory map and MU): see [`qemu/`](qemu/README.md),
+where Linux 7.2 completes 2,000 echo round trips through `/dev/ttyRPMSG0`. Register addresses (MU1 B side `0x30AB0000`,
 IRQ 97) follow NXP's SDK headers; check them against your reference manual
 and SDK.
 
@@ -59,8 +61,8 @@ cat /dev/ttyRPMSG0 & echo hello > /dev/ttyRPMSG0   # prints "hello"
 
 | Piece | Where |
 |---|---|
-| Runtime | `src/rt.rs` (vectors, reset in asm, FPU on), `link.x` (ITCM code, DTCM data) |
-| Resource table (vdev, 2 × 256-entry vrings at fixed addresses) | `resource_table!` in `src/main.rs`, its own section at `0x2001F000` (`link.x`) |
+| Runtime | `src/rt.rs` (vectors, reset in asm, FPU on), `tcm.x` (ITCM code, DTCM data); `qemu-ddr.x` with `--features qemu-imx8mp` |
+| Resource table (vdev, 2 × 256-entry vrings at fixed addresses) | `resource_table!` in `src/main.rs`, its own section at `0x2001F000` (`tcm.x`) |
 | Virtio transport | `openamp_remoteproc::RprocVirtio::new_device` |
 | Kick Linux | MU channel 1 (`src/mu.rs`), value `notifyid << 16` |
 | Kicked by Linux | MU interrupt → `on_irq` sets a flag → main loop polls `try_recv`, sleeps in `wfi` |

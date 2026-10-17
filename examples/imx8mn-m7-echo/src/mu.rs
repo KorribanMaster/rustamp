@@ -7,6 +7,9 @@
 //! is informational. This matches NXP's rpmsg-lite port (`RPMSG_MU_CHANNEL`
 //! = 1) and the `mboxes = <&mu 0 1>, <&mu 1 1>` binding.
 
+// The QEMU build polls the MU and never sleeps on an interrupt.
+#![cfg_attr(feature = "qemu-imx8mp", allow(dead_code))]
+
 use core::ptr::{read_volatile, write_volatile};
 
 /// MU B-side base address on i.MX 8M Nano (MU1_B, M7 view).

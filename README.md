@@ -43,8 +43,10 @@ while let Some(Received::Message(m)) = rpmsg.try_recv()? {
 }
 ```
 
-A complete, linkable example for the i.MX 8M Nano Cortex-M7 driven by Linux
-`imx_rproc` is in [`examples/imx8mn-m7-echo`](examples/imx8mn-m7-echo).
+A complete example for the i.MX 8M Nano/Plus Cortex-M7 driven by Linux
+`imx_rproc` is in [`examples/imx8mn-m7-echo`](examples/imx8mn-m7-echo). It
+runs under QEMU (`imx8mp-evk` with the Cortex-M7 AMP series) via
+[`qemu/reproduce.sh`](examples/imx8mn-m7-echo/qemu/reproduce.sh).
 
 ## Status
 
@@ -56,7 +58,8 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 | Rust host ↔ C open-amp remote, C host ↔ Rust remote (`interop-tests`) | 20,000 checked round trips each way |
 | Firmware ELF from the example, loaded by this crate's ELF loader | Entry, segments and resource table as expected |
 | Compiles for `thumbv7em-none-eabihf`, `armv7a-none-eabi`, `aarch64-unknown-none` | Yes, including the cache-maintenance asm |
-| Linux kernel remoteproc on real hardware (i.MX 8M Nano) | Not yet run |
+| Linux 7.2 `imx_rproc` + `rpmsg_tty` ↔ our firmware on QEMU `imx8mp-evk` with the Cortex-M7 AMP series ([details](examples/imx8mn-m7-echo/qemu/README.md)) | 2,000 checked round trips through `/dev/ttyRPMSG0` |
+| Linux kernel remoteproc on real hardware (i.MX 8M Nano/Plus) | Not yet run |
 | Miri and loom | Not yet run (planned in CI) |
 
 ## Design notes
@@ -89,6 +92,11 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 
 ### Interop findings
 
+* The v2 QEMU Cortex-M7 AMP series' MU model compares byte offsets with
+  register indices, which breaks Linux's `imx-mailbox`. A fix is in
+  `examples/imx8mn-m7-echo/qemu/patches`; see that README for the other
+  QEMU findings.
+
 * C open-amp's remoteproc vdev never sets `vdev->features`, so a C remote
   that advertises `VIRTIO_RING_F_EVENT_IDX` in its resource table will not
   actually use event-idx. Rust peers negotiate it whenever it is offered;
@@ -100,7 +108,7 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 crates/          the five library crates
 interop-tests/   Rust ↔ C tests; builds pinned C libmetal + open-amp with cmake
 examples/        imx8mn-m7-echo: Cortex-M7 firmware with its own minimal runtime
-.github/         CI: tests, lints, embedded cross-builds, interop
+.github/         CI: tests, lints, embedded cross-builds, interop; nightly QEMU run
 ```
 
 ## Testing

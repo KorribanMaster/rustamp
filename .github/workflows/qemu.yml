@@ -1,0 +1,37 @@
+name: QEMU imx8mp-evk (Cortex-M7 AMP)
+
+# Builds QEMU with the Cortex-M7 AMP series, a mainline kernel and the
+# example firmware, then runs the Linux <-> M7 rpmsg echo test. Heavy
+# (~30 min), so it runs nightly and on demand rather than on every push.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 2 * * *"
+
+jobs:
+  qemu-imx8mp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabihf
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build pkg-config libglib2.0-dev \
+            libpixman-1-dev python3-venv clang lld llvm flex bison bc
+      - uses: actions/cache@v4
+        with:
+          path: |
+            qemu-work/qemu-build
+            qemu-work/linux-build
+          key: qemu-imx8mp-${{ hashFiles('examples/imx8mn-m7-echo/qemu/reproduce.sh', 'examples/imx8mn-m7-echo/qemu/patches/**', 'examples/imx8mn-m7-echo/qemu/*.dts') }}
+      - run: examples/imx8mn-m7-echo/qemu/reproduce.sh "$PWD/qemu-work"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qemu-imx8mp-logs
+          path: |
+            qemu-work/console.log
+            qemu-work/m7-uart4.log
