@@ -6,7 +6,18 @@
 //! wakes a task). This module only defines the controller interface and a
 //! dispatch table for platforms that want libmetal-style registration.
 
-use core::sync::atomic::{AtomicPtr, Ordering};
+use core::sync::atomic::Ordering;
+
+#[cfg(not(loom))]
+use core::{
+    hint::spin_loop,
+    sync::atomic::{AtomicPtr, AtomicUsize, fence},
+};
+#[cfg(loom)]
+use loom::{
+    hint::spin_loop,
+    sync::atomic::{AtomicPtr, AtomicUsize, fence},
+};
 
 /// Enables and disables interrupt lines.
 pub trait IrqController {
@@ -22,19 +33,62 @@ pub type IrqHandler = fn(irq: u32, arg: *mut ());
 /// A fixed-size table mapping interrupt numbers to handlers.
 ///
 /// Registration and dispatch are lock-free, so [`IrqTable::dispatch`] may be
-/// called from an interrupt handler while thread code registers.
+/// called from an interrupt handler while thread code registers. A dispatch
+/// that overlaps a registration of the same irq calls the old handler with
+/// its argument, the new handler with its argument, or nothing; never a mix.
+///
+/// Registrations of the same irq are serialised, so do not register from an
+/// interrupt handler an irq that the interrupted code may be registering.
 pub struct IrqTable<const N: usize> {
+    /// Per entry: odd while a registration is writing it (a sequence lock).
+    seq: [AtomicUsize; N],
     handlers: [AtomicPtr<()>; N],
     args: [AtomicPtr<()>; N],
 }
 
 impl<const N: usize> IrqTable<N> {
     /// An empty table.
+    #[cfg(not(loom))]
     pub const fn new() -> Self {
         IrqTable {
+            seq: [const { AtomicUsize::new(0) }; N],
             handlers: [const { AtomicPtr::new(core::ptr::null_mut()) }; N],
             args: [const { AtomicPtr::new(core::ptr::null_mut()) }; N],
         }
+    }
+
+    /// An empty table (not `const` under loom).
+    #[cfg(loom)]
+    pub fn new() -> Self {
+        IrqTable {
+            seq: core::array::from_fn(|_| AtomicUsize::new(0)),
+            handlers: core::array::from_fn(|_| AtomicPtr::new(core::ptr::null_mut())),
+            args: core::array::from_fn(|_| AtomicPtr::new(core::ptr::null_mut())),
+        }
+    }
+
+    /// Runs `write` on entry `i` with the sequence odd, so that readers
+    /// retry or skip.
+    fn write_entry(&self, i: usize, write: impl FnOnce()) {
+        let seq = &self.seq[i];
+        let mut s = seq.load(Ordering::Relaxed);
+        loop {
+            if s & 1 != 0 {
+                // Another registration of this irq is writing.
+                spin_loop();
+                s = seq.load(Ordering::Relaxed);
+                continue;
+            }
+            match seq.compare_exchange_weak(s, s + 1, Ordering::Acquire, Ordering::Relaxed) {
+                Ok(_) => break,
+                Err(now) => s = now,
+            }
+        }
+        // Orders the odd sequence before the entry stores: a reader that
+        // sees any of them also sees the sequence change.
+        fence(Ordering::Release);
+        write();
+        seq.store(s.wrapping_add(2), Ordering::Release);
     }
 
     /// Registers `handler` for `irq`, replacing any previous one.
@@ -43,30 +97,49 @@ impl<const N: usize> IrqTable<N> {
         if i >= N {
             return Err(crate::Error::InvalidParam);
         }
-        self.handlers[i].store(core::ptr::null_mut(), Ordering::Release);
-        self.args[i].store(arg, Ordering::Release);
-        self.handlers[i].store(handler as *mut (), Ordering::Release);
+        self.write_entry(i, || {
+            self.handlers[i].store(handler as *mut (), Ordering::Relaxed);
+            self.args[i].store(arg, Ordering::Relaxed);
+        });
         Ok(())
     }
 
     /// Removes the handler for `irq`.
     pub fn unregister(&self, irq: u32) {
-        if let Some(h) = self.handlers.get(irq as usize) {
-            h.store(core::ptr::null_mut(), Ordering::Release);
+        let i = irq as usize;
+        if i < N {
+            self.write_entry(i, || {
+                self.handlers[i].store(core::ptr::null_mut(), Ordering::Relaxed)
+            });
         }
     }
 
     /// Calls the handler for `irq`; returns whether one was registered.
+    ///
+    /// Never waits: if a registration of `irq` is in progress, the irq is
+    /// treated as having no handler.
     pub fn dispatch(&self, irq: u32) -> bool {
         let i = irq as usize;
-        let Some(h) = self.handlers.get(i) else {
+        let Some(seq) = self.seq.get(i) else {
             return false;
         };
-        let f = h.load(Ordering::Acquire);
+        let (f, arg) = loop {
+            let s = seq.load(Ordering::Acquire);
+            if s & 1 != 0 {
+                return false;
+            }
+            let f = self.handlers[i].load(Ordering::Relaxed);
+            let arg = self.args[i].load(Ordering::Relaxed);
+            // Orders the entry loads before the re-check.
+            fence(Ordering::Acquire);
+            if seq.load(Ordering::Relaxed) == s {
+                break (f, arg);
+            }
+            // A registration completed meanwhile (on another core): retry.
+        };
         if f.is_null() {
             return false;
         }
-        let arg = self.args[i].load(Ordering::Acquire);
         // SAFETY: non-null values are only ever stored from an `IrqHandler`
         // in `register`, and the pointer keeps that function's provenance.
         let f: IrqHandler = unsafe { core::mem::transmute::<*mut (), IrqHandler>(f) };

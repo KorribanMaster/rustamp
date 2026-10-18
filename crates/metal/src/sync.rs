@@ -14,9 +14,14 @@
 
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
+use core::sync::atomic::Ordering;
 #[cfg(feature = "critical-section")]
-use core::sync::atomic::AtomicUsize;
-use core::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicUsize};
+
+#[cfg(not(loom))]
+use core::{hint::spin_loop, sync::atomic::AtomicBool as SpinFlag};
+#[cfg(loom)]
+use loom::{hint::spin_loop, sync::atomic::AtomicBool as SpinFlag};
 
 /// A raw mutual-exclusion primitive.
 ///
@@ -43,17 +48,41 @@ pub unsafe trait RawLock {
 
 /// A test-and-test-and-set spin lock.
 #[derive(Debug)]
-pub struct RawSpinLock(AtomicBool);
+pub struct RawSpinLock(SpinFlag);
+
+impl RawSpinLock {
+    /// An unlocked lock.
+    #[cfg(not(loom))]
+    pub const fn new() -> Self {
+        RawSpinLock(SpinFlag::new(false))
+    }
+
+    /// An unlocked lock (not `const` under loom).
+    #[cfg(loom)]
+    pub fn new() -> Self {
+        RawSpinLock(SpinFlag::new(false))
+    }
+}
+
+impl Default for RawSpinLock {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 // SAFETY: compare_exchange(Acquire) only succeeds while the flag is false, and
 // unlock stores false with Release.
 unsafe impl RawLock for RawSpinLock {
-    const INIT: Self = RawSpinLock(AtomicBool::new(false));
+    #[cfg(not(loom))]
+    const INIT: Self = RawSpinLock::new();
+    // loom atomics have no `const` constructor; use `Mutex::from_raw`.
+    #[cfg(loom)]
+    const INIT: Self = panic!("under loom, build the lock with RawSpinLock::new()");
 
     fn lock(&self) {
         while !self.try_lock() {
             while self.0.load(Ordering::Relaxed) {
-                core::hint::spin_loop();
+                spin_loop();
                 #[cfg(feature = "std")]
                 std::thread::yield_now();
             }
@@ -117,7 +146,7 @@ unsafe impl RawLock for CsLock {
 
     fn lock(&self) {
         while !self.try_lock() {
-            core::hint::spin_loop();
+            spin_loop();
         }
     }
 
@@ -189,6 +218,15 @@ impl<R: RawLock, T> Mutex<R, T> {
     pub const fn new(value: T) -> Self {
         Mutex {
             raw: R::INIT,
+            data: UnsafeCell::new(value),
+        }
+    }
+
+    /// A mutex over an already constructed raw lock, for locks that need
+    /// run-time initialisation (an RTOS mutex handle, say).
+    pub fn from_raw(raw: R, value: T) -> Self {
+        Mutex {
+            raw,
             data: UnsafeCell::new(value),
         }
     }
