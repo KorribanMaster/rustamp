@@ -1,0 +1,43 @@
+[package]
+name = "openamp-fuzz"
+description = "libFuzzer targets for the parsers of peer-controlled data"
+version = "0.0.0"
+edition = "2024"
+license = "BSD-3-Clause"
+publish = false
+
+# Not part of the main workspace: needs nightly and cargo-fuzz. Run with
+#   cargo +nightly fuzz run <target>     (from this directory)
+[workspace]
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+openamp-metal = { path = "../crates/metal", features = ["std"] }
+openamp-virtio = { path = "../crates/virtio" }
+openamp-rpmsg = { path = "../crates/rpmsg" }
+openamp-remoteproc = { path = "../crates/remoteproc" }
+
+[[bin]]
+name = "remoteproc_load"
+path = "fuzz_targets/remoteproc_load.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "device_queue"
+path = "fuzz_targets/device_queue.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "rpmsg_recv"
+path = "fuzz_targets/rpmsg_recv.rs"
+test = false
+doc = false
+bench = false

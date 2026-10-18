@@ -32,7 +32,12 @@ const GFEATURES: usize = 8;
 
 impl Shared {
     pub fn new(dfeatures: u32) -> Arc<Self> {
-        let io = IoRegion::alloc(SHM_SIZE, SHM_PHYS);
+        Self::new_in(IoRegion::alloc(SHM_SIZE, SHM_PHYS), dfeatures)
+    }
+
+    /// Over `io` (`SHM_SIZE` bytes at `SHM_PHYS`, zeroed), for callers that
+    /// reuse one region.
+    pub fn new_in(io: IoRegion, dfeatures: u32) -> Arc<Self> {
         io.write_u32(DFEATURES, dfeatures).unwrap();
         let layout = VringLayout::new(VRING_NUM, 4096).unwrap();
         let q = |offset, notify_id| QueueConfig {
