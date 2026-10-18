@@ -15,9 +15,14 @@ categories.workspace = true
 default = ["mmio"]
 # virtio-mmio transport (driver side).
 mmio = []
+# Diagnostics through the `log` or `defmt` facade. Without either, nothing is
+# logged.
+log = ["openamp-metal/log"]
+defmt = ["dep:defmt", "openamp-metal/defmt"]
 
 [dependencies]
 openamp-metal.workspace = true
+defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
 openamp-metal = { workspace = true, features = ["std"] }

@@ -3,11 +3,11 @@
 
 use core::fmt;
 
+use openamp_metal::IoRegion;
 use openamp_metal::cache::{Cache, NoCache};
 use openamp_metal::shmem::ShmemPool;
 use openamp_metal::sync::{Mutex, RawLock, RawSpinLock};
 use openamp_metal::time::{Delay, SpinDelay};
-use openamp_metal::{IoRegion, metal_warn};
 use openamp_virtio::{
     AvailBuf, Buffer, DeviceQueue, DriverQueue, Role, Transport, features, status,
 };
@@ -743,7 +743,7 @@ impl<T: Transport, L: RawLock, const E: usize> RpmsgVirtio<T, L, E> {
             self.shm.read_bytes(off, &mut hb)?;
             let hdr = Header::from_bytes(&hb);
             if hdr.len as usize > blen as usize - HDR_SIZE {
-                metal_warn!("rpmsg: dropping message with bad length {}", hdr.len);
+                warn!("rpmsg: dropping message with bad length {}", hdr.len);
                 self.release_rx(&mut st, token)?;
                 continue;
             }
@@ -989,7 +989,7 @@ impl<T: Transport, L: RawLock, const E: usize> Drop for RxMessage<'_, T, L, E> {
         if let Some(t) = self.token.take() {
             let mut st = self.dev.state.lock();
             if let Err(e) = self.dev.release_rx(&mut st, t) {
-                metal_warn!("rpmsg: failed to release rx buffer: {}", e);
+                warn!("rpmsg: failed to release rx buffer: {}", e);
             }
         }
     }
@@ -1092,7 +1092,7 @@ impl<T: Transport, L: RawLock, const E: usize> Drop for TxBuffer<'_, T, L, E> {
         if let Some(t) = self.token.take() {
             // `rpmsg_release_tx_buffer`: keep it for the next send.
             if self.dev.state.lock().push_reclaim(t).is_err() {
-                metal_warn!("rpmsg: reclaim list full, leaking a tx buffer");
+                warn!("rpmsg: reclaim list full, leaking a tx buffer");
             }
         }
     }

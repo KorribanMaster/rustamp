@@ -17,6 +17,9 @@
 #[cfg(any(feature = "std", test))]
 extern crate std;
 
+#[macro_use]
+mod fmt;
+
 pub mod elf;
 mod error;
 mod rproc;

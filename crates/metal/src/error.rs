@@ -3,6 +3,7 @@ use core::fmt;
 
 /// Errors reported by the metal layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[non_exhaustive]
 pub enum Error {
     /// An offset or length falls outside the region.

@@ -12,7 +12,6 @@ Hardware and OS abstraction for [openamp-rs](../../README.md), a port of
 * `notify`, `time`, `irq`: platform hooks (`Notifier`, `Delay`,
   `IrqController`, `IrqTable`).
 * `shmem::ShmemPool`: bump allocator for message buffers and vrings.
-* `log`: pluggable handler (`metal_log`).
 * `linux` (feature): UIO devices and shared-memory files via `mmap`.
 
 Features: `alloc`, `std`, `linux`, `cortex-m7`, `armv7a`.

@@ -17,10 +17,16 @@ default = []
 # executor. Wake tasks by calling `RpmsgVirtio::on_notify` from the
 # notification interrupt.
 async = []
+# Diagnostics through the `log` or `defmt` facade. Without either, nothing is
+# logged.
+log = ["dep:log", "openamp-metal/log", "openamp-virtio/log"]
+defmt = ["dep:defmt", "openamp-metal/defmt", "openamp-virtio/defmt"]
 
 [dependencies]
 openamp-metal.workspace = true
 openamp-virtio.workspace = true
+log = { workspace = true, optional = true }
+defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
 openamp-metal = { workspace = true, features = ["std"] }

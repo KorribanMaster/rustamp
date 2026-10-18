@@ -3,6 +3,7 @@ use core::fmt;
 
 /// Remoteproc errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[non_exhaustive]
 pub enum Error {
     /// Shared-memory access failed.

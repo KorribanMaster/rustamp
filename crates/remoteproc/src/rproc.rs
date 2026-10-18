@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //! Remote processor lifecycle (`remoteproc.c`).
 
+use openamp_metal::IoRegion;
 use openamp_metal::notify::Notifier;
 use openamp_metal::shmem::ShmemPool;
-use openamp_metal::{IoRegion, metal_warn};
 use openamp_virtio::ring::VringLayout;
 
 use crate::elf::{self, ImageStore};
@@ -202,7 +202,7 @@ impl<O: RemoteprocOps> Remoteproc<O> {
                 RscType::Vendor(_) => self.ops.handle_vendor_rsc(t, &e)?,
                 RscType::Unknown(ty) => {
                     // Linux warns and skips unknown types; so do we.
-                    metal_warn!("remoteproc: skipping unknown resource type {}", ty);
+                    warn!("remoteproc: skipping unknown resource type {}", ty);
                 }
             }
         }

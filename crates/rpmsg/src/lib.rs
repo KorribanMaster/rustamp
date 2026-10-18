@@ -35,6 +35,9 @@
 #[cfg(test)]
 extern crate std;
 
+#[macro_use]
+mod fmt;
+
 mod device;
 mod error;
 mod name;

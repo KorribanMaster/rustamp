@@ -25,9 +25,15 @@ armv7a = []
 # `sync::CsLock`: a lock that masks interrupts, for rpmsg used from interrupt
 # handlers. The application links a `critical-section` implementation.
 critical-section = ["dep:critical-section"]
+# Diagnostics through the `log` or `defmt` facade. Without either, nothing is
+# logged.
+# (openamp-metal itself does not log; `log` exists so features forward uniformly.)
+log = []
+defmt = ["dep:defmt"]
 
 [dependencies]
 critical-section = { workspace = true, optional = true }
+defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
 critical-section = { workspace = true, features = ["std"] }

@@ -17,11 +17,21 @@ default = ["rpmsg"]
 rpmsg = ["dep:openamp-rpmsg", "dep:openamp-virtio", "dep:openamp-metal"]
 # Host-side server executing requests against the host filesystem.
 std = []
+# Diagnostics through the `log` or `defmt` facade. Without either, nothing is
+# logged.
+log = ["openamp-rpmsg?/log", "openamp-virtio?/log", "openamp-metal?/log"]
+defmt = [
+    "dep:defmt",
+    "openamp-rpmsg?/defmt",
+    "openamp-virtio?/defmt",
+    "openamp-metal?/defmt",
+]
 
 [dependencies]
 openamp-rpmsg = { workspace = true, optional = true }
 openamp-virtio = { workspace = true, optional = true }
 openamp-metal = { workspace = true, optional = true }
+defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
 openamp-metal = { workspace = true, features = ["std"] }

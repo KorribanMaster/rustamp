@@ -14,8 +14,6 @@
 //! * [`sync::Mutex`]: a lock with a pluggable [`sync::RawLock`].
 //! * [`shmem::ShmemPool`]: a bump allocator over a shared region.
 //!
-//! * [`log`]: a pluggable diagnostics handler (`metal_log`).
-//!
 //! Backends: bare-metal (everything here) and, with the `linux` feature, Linux
 //! userspace ([`linux`]: UIO devices and shared-memory files).
 //!
@@ -35,8 +33,6 @@ pub mod cache;
 mod error;
 pub mod io;
 pub mod irq;
-#[macro_use]
-pub mod log;
 pub mod notify;
 pub mod shmem;
 pub mod sync;

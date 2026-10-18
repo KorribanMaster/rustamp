@@ -23,6 +23,7 @@ pub trait Channel {
 
 /// Proxy errors.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Error<E> {
     /// The channel failed.
     Channel(E),
