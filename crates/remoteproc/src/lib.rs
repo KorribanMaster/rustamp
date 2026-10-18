@@ -1,18 +1,79 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//! Remote processor support, a Rust port of `open-amp/lib/remoteproc`.
+//! Remote processor lifecycle, resource tables and ELF loading for OpenAMP:
+//! a `no_std` port of open-amp's `lib/remoteproc`, compatible with Linux
+//! remoteproc.
 //!
-//! Two audiences:
+//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
 //!
-//! * **Firmware** (the remote): declare the resource table with
-//!   [`resource_table!`], then turn its vdev into a virtio [`Transport`]
-//!   with [`RprocVirtio::new_device`] and hand that to `openamp-rpmsg`.
-//! * **Hosts** written with this crate: [`Remoteproc`] loads an ELF image
-//!   through [`RemoteprocOps`], parses the resource table, allocates vrings
-//!   and provides the driver-side [`RprocVirtio`]. (On Linux hosts the
-//!   kernel's remoteproc framework does this instead.)
+//! ```text
+//! openamp-proxy ──► openamp-rpmsg ──────┐
+//!                                       ├──► openamp-virtio ──► openamp-metal
+//! openamp-remoteproc ───────────────────┘
+//!   (supplies the virtio Transport that rpmsg runs over)
+//! ```
 //!
-//! [`Transport`]: openamp_virtio::Transport
+//! In OpenAMP terms, the *host* here is the main controller (often Linux),
+//! and the *remote* is the core it loads, starts and talks to.
+//!
+//! # Resource table
+//!
+//! The firmware describes what it needs in a *resource table*, an ELF
+//! section named `.resource_table`: memory carveouts, a trace buffer, and
+//! virtio devices (vdevs) with their vrings. The host reads it when loading
+//! the image and writes back what it set up (vring addresses, notify ids,
+//! negotiated features, device status).
+//!
+//! # Firmware (the remote)
+//!
+//! Declare the table with [`resource_table!`], then turn its vdev into the
+//! virtio [`Transport`](openamp_virtio::Transport) that rpmsg runs over:
+//!
+//! ```no_run
+//! use openamp_metal::IoRegion;
+//! use openamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
+//! use openamp_remoteproc::{RprocVirtio, resource_table};
+//! use openamp_rpmsg::{Options, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
+//! use openamp_virtio::VIRTIO_ID_RPMSG;
+//!
+//! resource_table! {
+//!     static RESOURCE_TABLE: RscTable = {
+//!         vdev: FwRscVdev<2> = FwRscVdev::new(VIRTIO_ID_RPMSG, 0, 1 << VIRTIO_RPMSG_F_NS, [
+//!             FwRscVdevVring::new(0x5500_0000, 0x1000, 256, 0),
+//!             FwRscVdevVring::new(0x5500_8000, 0x1000, 256, 1),
+//!         ]),
+//!     };
+//! }
+//!
+//! # fn kick_host(_: u32) {}
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! // SAFETY: memory reserved for OpenAMP in the host's device tree.
+//! let shm = unsafe { IoRegion::new(0x5500_0000 as *mut u8, 0x5500_0000, 0x50_0000) };
+//! let table = ResourceTable::new(RESOURCE_TABLE.io_region(), 0, RESOURCE_TABLE.size())?;
+//! let transport = RprocVirtio::new_device(table.find_vdev(0)?, shm.clone(), kick_host);
+//! // Waits until the host has set up the vdev.
+//! let rpmsg: RpmsgVirtio<_> = RpmsgVirtio::new_remote(transport, shm, Options::default())?;
+//! # Ok(()) }
+//! ```
+//!
+//! # Hosts
+//!
+//! On Linux, the kernel's remoteproc framework is the host. Hosts written
+//! with this crate use [`Remoteproc`]: implement [`RemoteprocOps`] (map
+//! memory, start, stop), then `config` → `load` an ELF image (streamed
+//! through [`elf::ImageStore`]) → [`Remoteproc::create_vdev`] for the
+//! driver-side transport → `start`. The ELF loader and the table parser
+//! treat the image and table as untrusted input.
+//!
+//! # Features
+//!
+//! None are on by default.
+//!
+//! | Feature | Adds |
+//! |---|---|
+//! | `std` | [`elf::ImageStore`] for `std::fs::File` |
+//! | `log`, `defmt` | Diagnostics (skipped resources); `defmt::Format` on [`Error`] |
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(any(feature = "std", test))]
 extern crate std;

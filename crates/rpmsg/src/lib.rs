@@ -1,36 +1,66 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//! RPMsg over virtio, a Rust port of `open-amp/lib/rpmsg`.
+//! RPMsg, OpenAMP's inter-processor messaging, over virtio: a `no_std`
+//! port of open-amp's `lib/rpmsg`, wire-compatible with the Linux kernel's
+//! `virtio_rpmsg_bus` and with C OpenAMP.
 //!
-//! Wire-compatible with the Linux kernel's `virtio_rpmsg_bus` and with C
-//! OpenAMP in both roles:
+//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
 //!
-//! * **Remote** (virtio device role): firmware talking to Linux or to an
-//!   OpenAMP host. Created with [`RpmsgVirtio::new_remote`].
-//! * **Host** (virtio driver role): owns the message buffers. Created with
-//!   [`RpmsgVirtio::new_host`].
+//! ```text
+//! openamp-proxy ──► openamp-rpmsg ──────┐
+//!                                       ├──► openamp-virtio ──► openamp-metal
+//! openamp-remoteproc ───────────────────┘
+//!   (supplies the virtio Transport that rpmsg runs over)
+//! ```
 //!
-//! The API is polled first: [`RpmsgVirtio::try_recv`] returns one message (or
-//! name-service event) at a time, and the message buffer goes back to the
-//! peer when the returned [`RxMessage`] is dropped, so holding a message is
-//! zero-copy. Sending copies into a ring buffer ([`RpmsgVirtio::send`]) or
-//! fills one in place ([`RpmsgVirtio::get_tx_buffer`]). With the `async`
-//! feature, `recv().await`/`send_async().await` sit on top, woken by
-//! [`RpmsgVirtio::on_notify`].
+//! In OpenAMP terms, the *host* here is the main controller (often Linux),
+//! and the *remote* is the core it loads, starts and talks to.
+//!
+//! # Model
+//!
+//! Messages go between *endpoints*, each with a 32-bit address. A message
+//! carries a 16-byte header (source, destination, length) and its payload in
+//! one shared buffer. The *name service* announces endpoints by name, so
+//! Linux binds a driver to them (`rpmsg-tty` gives `/dev/ttyRPMSG*`).
+//!
+//! * Remote (virtio device role): [`RpmsgVirtio::new_remote`], usually over
+//!   `openamp_remoteproc::RprocVirtio`.
+//! * Host (virtio driver role, owns the buffers): [`RpmsgVirtio::new_host`].
+//!
+//! The API is polled first. [`RpmsgVirtio::try_recv`] returns one message or
+//! name-service event at a time; an [`RxMessage`] holds its buffer until
+//! dropped, so receiving is zero-copy. Sending copies into a buffer
+//! ([`RpmsgVirtio::send`]) or fills one in place
+//! ([`RpmsgVirtio::get_tx_buffer`]).
 //!
 //! ```no_run
 //! # use openamp_rpmsg::*;
 //! # fn demo<T: openamp_virtio::Transport>(rpmsg: RpmsgVirtio<T>) -> Result<()> {
-//! let ept = rpmsg.create_endpoint("rpmsg-client-sample", ADDR_ANY, ADDR_ANY)?;
+//! // Announced to the host as "rpmsg-tty".
+//! let ept = rpmsg.create_endpoint("rpmsg-tty", ADDR_ANY, ADDR_ANY)?;
 //! loop {
 //!     if let Some(Received::Message(msg)) = rpmsg.try_recv()? {
-//!         if msg.endpoint() == ept {
-//!             rpmsg.send_to(ept, msg.src(), msg.data())?; // echo
-//!         }
-//!     }
+//!         rpmsg.send_to(ept, msg.src(), msg.data())?; // echo
+//!     } // the buffer goes back to the host when `msg` drops
 //! }
 //! # }
 //! ```
+//!
+//! The lock type `L` of [`RpmsgVirtio`] defaults to a spin lock, which must
+//! not be taken from an interrupt handler. Call [`RpmsgVirtio::on_notify`]
+//! from the interrupt and do the work in thread context. If you do need rpmsg
+//! in an interrupt handler, use `openamp_metal::sync::CsLock`.
+//!
+//! # Features
+//!
+//! None are on by default.
+//!
+//! | Feature | Adds |
+//! |---|---|
+//! | `async` | `recv().await`, `send_async().await`, woken by [`RpmsgVirtio::on_notify`] |
+//! | `log` | Diagnostics (dropped malformed messages) through `log` |
+//! | `defmt` | The same through `defmt`, and `defmt::Format` on [`Error`] |
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(test)]
 extern crate std;

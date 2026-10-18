@@ -1,20 +1,52 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//! File and console I/O forwarding over rpmsg, a Rust port of
-//! `open-amp/lib/proxy` (`rpmsg_retarget`).
+//! File and console I/O forwarding over rpmsg: a port of open-amp's
+//! `lib/proxy` (`rpmsg_retarget`), wire-compatible with the C
+//! implementation and `rpmsg-proxy-app`.
 //!
-//! The remote has no filesystem; it sends `open`/`read`/`write`/`close`
+//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
+//!
+//! ```text
+//! openamp-proxy ──► openamp-rpmsg ──────┐
+//!                                       ├──► openamp-virtio ──► openamp-metal
+//! openamp-remoteproc ───────────────────┘
+//!   (supplies the virtio Transport that rpmsg runs over)
+//! ```
+//!
+//! In OpenAMP terms, the *host* here is the main controller (often Linux),
+//! and the *remote* is the core it loads, starts and talks to.
+//!
+//! The remote has no filesystem. It sends `open`/`read`/`write`/`close`
 //! requests to a proxy on the host, which executes them and replies.
 //!
-//! * [`ProxyClient`] (remote, `no_std`): the calls, plus [`Stdout`] for
-//!   `core::fmt::Write`. Runs over any [`Channel`]; with the `rpmsg`
-//!   feature, [`RpmsgChannel`] uses an `openamp-rpmsg` endpoint.
-//! * [`server::ProxyServer`] (host, `std` feature): executes requests inside
-//!   a sandbox directory.
+//! * [`ProxyClient`] (remote, `no_std`): the calls, and [`Stdout`] for
+//!   `core::fmt::Write`. Runs over any [`Channel`], such as
+//!   [`RpmsgChannel`] over an `openamp-rpmsg` endpoint.
+//! * [`server::ProxyServer`] (host): executes requests inside a root
+//!   directory it never lets the remote leave.
 //!
-//! The wire format is `struct rpmsg_rpc_syscall` from
-//! `openamp/rpmsg_retarget.h`, so either side interoperates with the C
-//! implementation (`rpmsg-proxy-app` from openamp-system-reference).
+//! ```no_run
+//! # use openamp_proxy::{flags, Channel, ProxyClient};
+//! # fn demo<C: Channel>(channel: C) -> Result<(), openamp_proxy::Error<C::Error>> {
+//! use core::fmt::Write;
+//!
+//! let mut proxy = ProxyClient::new(channel);
+//! let _ = writeln!(proxy.stdout(), "hello from the remote");
+//! let fd = proxy.open("log.txt", flags::O_WRONLY | flags::O_CREAT, 0o644)?;
+//! proxy.write_all(fd, b"written on the host\n")?;
+//! proxy.close(fd)?;
+//! # Ok(()) }
+//! ```
+//!
+//! # Features
+//!
+//! | Feature | Adds |
+//! |---|---|
+//! | `rpmsg` (default) | [`RpmsgChannel`] |
+//! | `std` | [`server::ProxyServer`] |
+//! | `embedded-io` | [`ProxyClient::open_file`], a [`ProxyFile`] implementing `embedded_io::{Read, Write}` |
+//! | `log`, `defmt` | Forwarded to the rpmsg stack; `defmt::Format` on [`Error`] |
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(any(feature = "std", test))]
 extern crate std;

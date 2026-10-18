@@ -1,23 +1,66 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//! Virtio for OpenAMP: split virtqueues in both roles, and the transport
-//! interface rpmsg runs over. A Rust port of `open-amp/lib/virtio` and
-//! `lib/virtio_mmio`.
+//! Virtio split virtqueues and the transport interface for OpenAMP: a
+//! `no_std` port of open-amp's `lib/virtio` and `lib/virtio_mmio`.
 //!
-//! * [`ring::VringLayout`]: the split-ring memory layout, identical to the
-//!   legacy `vring` used by Linux remoteproc (alignment from the resource
-//!   table).
-//! * [`DriverQueue`]: the side that owns buffers and posts them (Linux host,
-//!   or an OpenAMP host).
-//! * [`DeviceQueue`]: the side that consumes posted buffers and returns them
-//!   (remote firmware).
+//! Virtio is OpenAMP's media-access layer: rpmsg messages travel in buffers
+//! passed through two vrings in shared memory.
+//!
+//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
+//!
+//! ```text
+//! openamp-proxy ──► openamp-rpmsg ──────┐
+//!                                       ├──► openamp-virtio ──► openamp-metal
+//! openamp-remoteproc ───────────────────┘
+//!   (supplies the virtio Transport that rpmsg runs over)
+//! ```
+//!
+//! In OpenAMP terms, the *host* here is the main controller (often Linux),
+//! and the *remote* is the core it loads, starts and talks to.
+//!
+//! # What it provides
+//!
+//! * [`ring::VringLayout`]: the split-ring layout, identical to the legacy
+//!   vring Linux remoteproc uses.
+//! * [`DriverQueue`]: owns buffers and posts them (the host).
+//! * [`DeviceQueue`]: takes posted buffers and returns them (the remote).
 //! * [`Transport`]: status, feature negotiation, config space, queue
-//!   discovery and notification. Implemented by
-//!   `openamp-remoteproc` (resource-table vdevs) and [`mmio::MmioTransport`].
+//!   discovery and notification. Implemented by `openamp-remoteproc`
+//!   (resource-table vdevs) and [`mmio::MmioTransport`].
 //!
-//! Everything read from shared memory is treated as untrusted: ring indices,
-//! descriptor heads and chain links are validated, and violations surface as
-//! [`Error::InvalidDescriptor`] rather than panics.
+//! Everything the peer writes is untrusted. Bad indices, descriptor heads or
+//! chains become [`Error::InvalidDescriptor`], never a panic or an
+//! out-of-bounds access.
+//!
+//! ```
+//! use openamp_metal::IoRegion;
+//! use openamp_virtio::ring::VringLayout;
+//! use openamp_virtio::{Buffer, DeviceQueue, DriverQueue, QueueConfig};
+//!
+//! let layout = VringLayout::new(8, 64)?;
+//! let cfg = QueueConfig {
+//!     io: IoRegion::alloc(layout.size(), 0x5500_0000),
+//!     offset: 0,
+//!     layout,
+//!     notify_id: 0,
+//! };
+//! let mut driver = DriverQueue::new(&cfg, false)?;
+//! let mut device = DeviceQueue::new(&cfg, false)?;
+//!
+//! driver.add(&[Buffer { addr: 0x5540_0000, len: 512, device_writable: true }])?;
+//! let buf = device.pop_avail()?.expect("posted");
+//! device.push_used(buf, 42)?; // "wrote 42 bytes"
+//! assert_eq!(driver.pop_used()?.map(|u| u.len), Some(42));
+//! # Ok::<(), openamp_virtio::Error>(())
+//! ```
+//!
+//! # Features
+//!
+//! | Feature | Adds |
+//! |---|---|
+//! | `mmio` (default) | [`mmio::MmioTransport`], the virtio-mmio driver |
+//! | `log`, `defmt` | `defmt::Format` on [`Error`] |
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(test)]
 extern crate std;
