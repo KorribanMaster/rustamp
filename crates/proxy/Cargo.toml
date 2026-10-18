@@ -38,6 +38,7 @@ defmt = { workspace = true, optional = true }
 embedded-io = { workspace = true, optional = true }
 
 [dev-dependencies]
+proptest.workspace = true
 openamp-metal = { workspace = true, features = ["std"] }
 openamp-virtio.workspace = true
 openamp-rpmsg.workspace = true

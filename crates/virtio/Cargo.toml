@@ -25,6 +25,7 @@ openamp-metal.workspace = true
 defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
+proptest.workspace = true
 openamp-metal = { workspace = true, features = ["std"] }
 
 [lints]

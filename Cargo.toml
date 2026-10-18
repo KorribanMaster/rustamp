@@ -31,6 +31,8 @@ atomic-waker = { version = "1.1", default-features = false }
 embedded-io = { version = "0.7", default-features = false }
 libc = { version = "0.2", default-features = false }
 memmap2 = { version = "0.9", default-features = false }
+proptest = "1.11"
+pollster = "1.0"
 critical-section = { version = "1.2", default-features = false }
 defmt = { version = "1.0", default-features = false }
 log = { version = "0.4", default-features = false }

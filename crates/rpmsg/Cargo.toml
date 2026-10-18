@@ -30,6 +30,8 @@ log = { workspace = true, optional = true }
 defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
+pollster.workspace = true
+proptest.workspace = true
 openamp-metal = { workspace = true, features = ["std"] }
 
 [lints]

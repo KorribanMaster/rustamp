@@ -1,0 +1,10 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 88480dbc66091c74c6f7a3b1ae19c618fc24bd6db71de8b5ef526087f24860da # shrinks to num = 1, event_idx = true, ops = [Add([(0, false)]), PopAvail, DevEnable, DrvKick]
+cc 788abf89f7c7ad83ffdcdaf1bc02046ba12e7ddd2ea8549eb309ee874ed9cf17 # shrinks to num = 1, event_idx = false, ops = [DevEnable, Add([(0, false)]), DevDisable, DrvKick]
+cc 61fc0125b994d5f1c58f14acdc47ecde926407d74a61fb44ff1d5213df989cea # shrinks to num = 8, event_idx = true, ops = [Add([(0, false)]), DrvEnable, PopAvail, PushUsed(0, 0), PopUsed, DevKick]
+cc c71df79a08cdefda831cd5d02eab2c1e246093e400a1f597981d6646c5f92bac # shrinks to num = 2, event_idx = true, ops = [DevEnable, Add([(0, false)]), DrvKick, Add([(0, false)]), DrvKick]
