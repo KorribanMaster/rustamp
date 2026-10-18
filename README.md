@@ -48,6 +48,11 @@ A complete example for the i.MX 8M Nano/Plus Cortex-M7 driven by Linux
 runs under QEMU (`imx8mp-evk` with the Cortex-M7 AMP series) via
 [`qemu/reproduce.sh`](examples/imx8mn-m7-echo/qemu/reproduce.sh).
 
+For a Cortex-A9 MPCore with Linux on CPU0 and the firmware on CPU1
+(Zynq-7000, Arria 10), see [`examples/cortex-a9-rtu-echo`](examples/cortex-a9-rtu-echo)
+and its Linux driver [`linux/a9-rproc`](linux/a9-rproc); it runs on
+upstream QEMU's `xilinx-zynq-a9`.
+
 ## Status
 
 Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
@@ -59,8 +64,10 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 | Firmware ELF from the example, loaded by this crate's ELF loader | Entry, segments and resource table as expected |
 | Compiles for `thumbv7em-none-eabihf`, `armv7a-none-eabi`, `aarch64-unknown-none` | Yes, including the cache-maintenance asm |
 | Linux 7.2 `imx_rproc` + `rpmsg_tty` ↔ our firmware on QEMU `imx8mp-evk` with the Cortex-M7 AMP series ([details](examples/imx8mn-m7-echo/qemu/README.md)) | 2,000 checked round trips through `/dev/ttyRPMSG0` |
-| Linux kernel remoteproc on real hardware (i.MX 8M Nano/Plus) | Not yet run |
-| Miri and loom | Not yet run (planned in CI) |
+| Linux 7.2 `a9-rproc` + `rpmsg_tty` ↔ our firmware on CPU1 of QEMU `xilinx-zynq-a9` ([details](examples/cortex-a9-rtu-echo/qemu/README.md)) | 6,000 checked round trips, including two stop/start reloads |
+| Cortex-A9 firmware and driver for Arria 10 | Build and device tree compile only |
+| Linux kernel remoteproc on real hardware (i.MX 8M Nano/Plus, Zynq-7000, Arria 10) | Not yet run |
+| Miri (whole workspace) | Clean, run in CI; loom not yet |
 
 ## Design notes
 
@@ -108,7 +115,9 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 crates/          the five library crates
 interop-tests/   Rust ↔ C tests; builds pinned C libmetal + open-amp with cmake
 examples/        imx8mn-m7-echo: Cortex-M7 firmware with its own minimal runtime
-.github/         CI: tests, lints, embedded cross-builds, interop; nightly QEMU run
+                 cortex-a9-rtu-echo: Cortex-A9 CPU1 firmware (Zynq-7000, Arria 10)
+linux/           a9-rproc: remoteproc driver for a spare Cortex-A9 core (GPL-2.0)
+.github/         CI: tests, lints, embedded cross-builds, interop; nightly QEMU runs
 ```
 
 ## Testing
@@ -122,5 +131,7 @@ cargo test --manifest-path interop-tests/Cargo.toml --release
 ## License
 
 BSD-3-Clause, like the C libraries this is derived from; see
-[LICENSE](LICENSE) and [NOTICE](NOTICE). OpenAMP is a Linaro Community
-Project; this repository is independent of it.
+[LICENSE](LICENSE) and [NOTICE](NOTICE). Exceptions: the Linux driver in
+`linux/a9-rproc` is GPL-2.0-only (its binding GPL-2.0-only OR BSD-2-Clause),
+and the example device trees, which include Linux's, are GPL-2.0. OpenAMP is
+a Linaro Community Project; this repository is independent of it.

@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Arria 10 SoCDK (SD/MMC boot) with CPU1 handed to the openamp-rs RTU.
+ *
+ * Boot Linux with maxcpus=1. CPU1 is held in reset by the reset manager
+ * until the a9-rproc driver releases it ("socfpga-a10" start method, the
+ * same sequence as socfpga_a10_boot_secondary()). The RTU's debug output
+ * is on UART0 (0xffc02000); Linux keeps UART1 as its console. The memory
+ * map matches examples/cortex-a9-rtu-echo/src/board.rs.
+ *
+ * Not run on hardware: checked by compiling it in the QEMU CI job.
+ */
+/dts-v1/;
+#include "socfpga_arria10_socdk_sdmmc.dts"
+
+/ {
+	model = "Altera SOCFPGA Arria 10 + openamp-rs RTU on CPU1";
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		vdev0buffer: vdev0buffer@3f010000 {
+			compatible = "shared-dma-pool";
+			reg = <0x3f010000 0x100000>;
+			no-map;
+		};
+
+		vdev0vring0: vdev0vring0@3f000000 {
+			reg = <0x3f000000 0x8000>;
+			no-map;
+		};
+
+		vdev0vring1: vdev0vring1@3f008000 {
+			reg = <0x3f008000 0x8000>;
+			no-map;
+		};
+
+		rtu_fw: rtu-fw@3e000000 {
+			reg = <0x3e000000 0x1000000>;
+			no-map;
+		};
+	};
+
+	remoteproc-cpu1 {
+		compatible = "openamp-rs,cortex-a9-rproc";
+		interrupt-parent = <&intc>;
+		memory-region = <&vdev0buffer>, <&vdev0vring0>, <&vdev0vring1>, <&rtu_fw>;
+		openamp-rs,cpu = <1>;
+		openamp-rs,tx-sgi = <15>;
+		openamp-rs,rx-sgi = <14>;
+		openamp-rs,start-method = "socfpga-a10";
+		altr,rst-mgr = <&rst>;
+		altr,sys-mgr = <&sysmgr>;
+		openamp-rs,park-addr = <0x3efff000>;
+	};
+};

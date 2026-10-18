@@ -82,6 +82,42 @@ jobs:
           name: imx8mn-m7-echo
           path: examples/imx8mn-m7-echo/target/thumbv7em-none-eabihf/release/imx8mn-m7-echo
 
+  example-cortex-a9:
+    name: example-cortex-a9 (${{ matrix.board }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - board: zynq7000
+            flags: ""
+          - board: arria10
+            flags: --no-default-features --features arria10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7a-none-eabi
+          components: clippy
+      - name: host tests (memory map, MMU table, GIC encodings)
+        run: cargo test --lib --target x86_64-unknown-linux-gnu
+        working-directory: examples/cortex-a9-rtu-echo
+      - run: cargo clippy --release ${{ matrix.flags }} -- -D warnings
+        working-directory: examples/cortex-a9-rtu-echo
+      - run: cargo build --release ${{ matrix.flags }}
+        working-directory: examples/cortex-a9-rtu-echo
+        env:
+          RUSTFLAGS: -D warnings -C link-arg=-Trtu.x
+      - name: entry and resource table are where Linux expects them
+        run: |
+          elf=examples/cortex-a9-rtu-echo/target/armv7a-none-eabi/release/cortex-a9-rtu-echo
+          readelf -hW "$elf" | grep -E 'Entry point address: +0x3e000000'
+          readelf -SW "$elf" | grep -E '\.resource_table +PROGBITS +3ef00000'
+          mv "$elf" "$elf-${{ matrix.board }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cortex-a9-rtu-echo-${{ matrix.board }}
+          path: examples/cortex-a9-rtu-echo/target/armv7a-none-eabi/release/cortex-a9-rtu-echo-${{ matrix.board }}
+
   interop:
     name: interop with C open-amp
     runs-on: ubuntu-latest

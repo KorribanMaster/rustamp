@@ -1,0 +1,42 @@
+[package]
+name = "cortex-a9-rtu-echo"
+description = "rpmsg echo firmware for the second core of a Cortex-A9 MPCore (Zynq-7000, Arria 10), driven by Linux on the first"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+publish = false
+
+# Standalone: builds for armv7a-none-eabi, outside the host workspace.
+[workspace]
+
+[dependencies]
+openamp-metal = { path = "../../crates/metal" }
+openamp-virtio = { path = "../../crates/virtio", default-features = false }
+openamp-rpmsg = { path = "../../crates/rpmsg" }
+openamp-remoteproc = { path = "../../crates/remoteproc" }
+
+[features]
+default = ["zynq7000"]
+# Zynq-7000: debug output on UART0 (Cadence). Also what QEMU's
+# xilinx-zynq-a9 machine runs.
+zynq7000 = []
+# Arria 10 SoC: debug output on UART1 (16550).
+arria10 = []
+
+[lib]
+test = true
+
+[[bin]]
+name = "cortex-a9-rtu-echo"
+test = false
+bench = false
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+debug = true
+codegen-units = 1

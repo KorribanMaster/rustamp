@@ -1,0 +1,114 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/remoteproc/openamp-rs,cortex-a9-rproc.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Spare Cortex-A9 core as a remote processor
+
+maintainers:
+  - Eicke Hecht <eicke.hecht@gmail.com>
+
+description: |
+  One core of a Cortex-A9 MPCore cluster (for example CPU1 of a Zynq-7000
+  or Arria 10) that Linux does not bring up (boot with maxcpus=1) runs
+  firmware loaded by remoteproc. Notifications are software-generated
+  interrupts in both directions, raised through the GIC distributor's
+  GICD_SGIR. Stopping is cooperative through a park page in the
+  firmware's memory.
+
+properties:
+  compatible:
+    const: openamp-rs,cortex-a9-rproc
+
+  memory-region:
+    description: |
+      Reserved memory for the remote. The first entry is the rpmsg buffer
+      pool (a shared-dma-pool named vdev0buffer); the others are mapped as
+      carveouts with device address == physical address (vrings, firmware).
+    minItems: 2
+
+  interrupt-parent:
+    description: The GIC (arm,cortex-a9-gic). Its first reg is the distributor.
+
+  firmware-name:
+    maxItems: 1
+
+  openamp-rs,cpu:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: Physical CPU number of the remote core.
+    default: 1
+
+  openamp-rs,host-cpu:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: CPU the remote sends its SGI to.
+    default: 0
+
+  openamp-rs,tx-sgi:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: SGI Linux raises on the remote core.
+    minimum: 8
+    maximum: 15
+    default: 15
+
+  openamp-rs,rx-sgi:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: SGI the remote raises on the host CPU.
+    minimum: 8
+    maximum: 15
+    default: 14
+
+  openamp-rs,park-addr:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: Physical address of the 4 KiB park page (inside a carveout).
+
+  openamp-rs,start-method:
+    enum: [release-addr, socfpga-a10]
+    default: release-addr
+    description: |
+      How the core is started the first time. release-addr writes the entry
+      to openamp-rs,release-addr and wakes the core with SEV and the SGI
+      (Zynq-7000 boot ROM: 0xfffffff0; QEMU boot stub: 0). socfpga-a10
+      releases CPU1 through the Arria 10 reset manager.
+
+  openamp-rs,release-addr:
+    $ref: /schemas/types.yaml#/definitions/uint32
+
+  altr,rst-mgr:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: Arria 10 reset manager (socfpga-a10).
+
+  altr,sys-mgr:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: Arria 10 system manager with cpu1-start-addr (socfpga-a10).
+
+  openamp-rs,auto-boot:
+    type: boolean
+
+required:
+  - compatible
+  - memory-region
+  - openamp-rs,park-addr
+
+allOf:
+  - if:
+      properties:
+        openamp-rs,start-method:
+          const: socfpga-a10
+    then:
+      required: [altr,rst-mgr, altr,sys-mgr]
+    else:
+      required: [openamp-rs,release-addr]
+
+additionalProperties: false
+
+examples:
+  - |
+    remoteproc-cpu1 {
+        compatible = "openamp-rs,cortex-a9-rproc";
+        interrupt-parent = <&intc>;
+        memory-region = <&vdev0buffer>, <&vdev0vring0>, <&vdev0vring1>, <&rtu_fw>;
+        openamp-rs,start-method = "release-addr";
+        openamp-rs,release-addr = <0xfffffff0>;
+        openamp-rs,park-addr = <0x3efff000>;
+    };

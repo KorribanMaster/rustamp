@@ -17,3 +17,12 @@ futures::task::AtomicWaker (MIT OR Apache-2.0, the futures-rs authors).
 
 interop-tests/ builds and links the unmodified C libraries for testing; they
 are fetched separately and are not distributed with this repository.
+
+linux/a9-rproc/ is a Linux kernel driver, GPL-2.0-only. Its socfpga-a10
+start sequence follows socfpga_a10_boot_secondary() in Linux
+(arch/arm/mach-socfpga/platsmp.c). The device trees under examples/ include
+Linux's (GPL-2.0).
+
+examples/cortex-a9-rtu-echo/src/rt.rs is adapted from openamp-echo, the
+author's own Rust port of the Zynq-7000 RTU firmware, whose startup followed
+the Xilinx standalone BSP (MIT).

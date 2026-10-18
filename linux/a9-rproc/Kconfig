@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Appended to drivers/remoteproc/Kconfig for in-tree builds (see
+# examples/cortex-a9-rtu-echo/qemu/reproduce.sh).
+config A9_REMOTEPROC
+	tristate "Spare Cortex-A9 core as a remote processor"
+	depends on ARM && SMP && OF && ARM_GIC
+	depends on REMOTEPROC
+	select RPMSG_VIRTIO
+	help
+	  Runs firmware (an RTU) on a Cortex-A9 core that Linux does not use,
+	  for example CPU1 of a Zynq-7000 or Arria 10 booted with maxcpus=1.
+	  Notifications are SGIs in both directions.
