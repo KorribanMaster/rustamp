@@ -10,3 +10,14 @@ implementation and `rpmsg-proxy-app`.
   endpoint.
 * `server::ProxyServer` (feature `std`): executes requests inside a root
   directory, translating newlib `open` flags.
+* `ProxyFile` (feature `embedded-io`): a host file implementing
+  `embedded_io::{Read, Write}`, from `ProxyClient::open_file`.
+
+## Features
+
+| Feature | Adds |
+|---|---|
+| `rpmsg` (default) | `RpmsgChannel` |
+| `std` | The host server |
+| `embedded-io` | `ProxyFile` (uses `embedded-io`) |
+| `log`, `defmt` | Forwarded to the rpmsg stack; `defmt::Format` on `Error` |

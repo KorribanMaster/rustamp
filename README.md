@@ -4,8 +4,8 @@ A Rust port of the [OpenAMP](https://www.openampproject.org/) C libraries
 [open-amp](https://github.com/OpenAMP/open-amp) and
 [libmetal](https://github.com/OpenAMP/libmetal): remoteproc, rpmsg, virtio,
 the I/O proxy, and the hardware abstraction they sit on. It is `no_std`,
-dependency-free and wire-compatible with the Linux kernel and with C OpenAMP
-in both directions.
+needs no allocator, has no dependencies with default features, and is
+wire-compatible with the Linux kernel and with C OpenAMP in both directions.
 
 | Crate | Replaces | What it does |
 |---|---|---|
@@ -59,7 +59,10 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 
 | Check | Result |
 |---|---|
-| Unit and integration tests (`cargo test --workspace --all-features`) | 53 pass, including 100k-message threaded echoes with and without event-idx |
+| Unit and integration tests (`cargo test --workspace --all-features`) | 71 pass, including 100k-message threaded echoes with and without event-idx |
+| Property tests (proptest) for every parser of peer-controlled data, and a model of the virtqueue pair | Part of the above; no panics on hostile rings, headers, tables or images |
+| Fuzzing (`fuzz/`: ELF + resource table, device virtqueue, rpmsg receive) | Clean after five minutes per target; found one ELF offset overflow, now fixed |
+| Struct layouts against the C headers (`interop-tests`) | Sizes and offsets of the resource-table and rpmsg wire structures match |
 | Rust host ↔ C open-amp remote, C host ↔ Rust remote (`interop-tests`) | 20,000 checked round trips each way |
 | Firmware ELF from the example, loaded by this crate's ELF loader | Entry, segments and resource table as expected |
 | Compiles for `thumbv7em-none-eabihf`, `armv7a-none-eabi`, `aarch64-unknown-none` | Yes, including the cache-maintenance asm |
@@ -67,7 +70,9 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 | Linux 7.2 `a9-rproc` + `rpmsg_tty` ↔ our firmware on CPU1 of QEMU `xilinx-zynq-a9` ([details](examples/cortex-a9-rtu-echo/qemu/README.md)) | 6,000 checked round trips, including two stop/start reloads |
 | Cortex-A9 firmware and driver for Arria 10 | Build and device tree compile only |
 | Linux kernel remoteproc on real hardware (i.MX 8M Nano/Plus, Zynq-7000, Arria 10) | Not yet run |
-| Miri (whole workspace) | Clean, run in CI; loom not yet |
+| Miri (whole workspace) | Clean, run in CI |
+| loom (`RawSpinLock`, `IrqTable`) | Clean, run in CI; it found a race in `IrqTable`, now fixed |
+| Feature combinations (`cargo hack --feature-powerset --depth 2`), `cargo deny` | Clean, run in CI |
 
 ## Design notes
 
@@ -79,11 +84,16 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 * **Ownership in types.** A received message holds its ring buffer until
   dropped; a device-side descriptor (`AvailBuf`) is consumed when returned,
   so it cannot be returned twice.
-* **No allocator, no dependencies.** Sizes are const generics; the workspace
-  builds offline. Locks are pluggable (`RawLock`); the default spin lock is
-  right as long as rpmsg is never called from an interrupt handler, which the
-  API steers towards (the handler just calls `on_notify` or sets a flag). If
-  you do call rpmsg from an interrupt handler, use `CsLock` (feature
+* **No allocator; minimal, optional dependencies.** Sizes are const
+  generics. The core path (default features) depends on nothing outside the
+  workspace; optional features pull in the ecosystem standards where they
+  replace hand-written unsafe code or add something: `critical-section`,
+  `log`/`defmt`, `atomic-waker` (`async`), `memmap2` (Linux backend),
+  `embedded-io` (proxy files).
+* **Pluggable locks.** The default spin lock (`RawLock`) is right as long as
+  rpmsg is never called from an interrupt handler, which the API steers
+  towards (the handler just calls `on_notify` or sets a flag). If you do
+  call rpmsg from an interrupt handler, use `CsLock` (feature
   `openamp-metal/critical-section`).
 * **Polled first, async on top.** `try_recv`/`send` work everywhere; the
   `async` feature adds `recv().await` and `send_async().await` for Embassy,
@@ -116,6 +126,7 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 ```text
 crates/          the five library crates
 interop-tests/   Rust ↔ C tests; builds pinned C libmetal + open-amp with cmake
+fuzz/            cargo-fuzz targets for the parsers of peer-controlled data
 examples/        imx8mn-m7-echo: Cortex-M7 firmware on cortex-m-rt
                  cortex-a9-rtu-echo: Cortex-A9 CPU1 firmware (Zynq-7000, Arria 10)
 linux/           a9-rproc: remoteproc driver for a spare Cortex-A9 core (GPL-2.0)
@@ -128,7 +139,12 @@ linux/           a9-rproc: remoteproc driver for a spare Cortex-A9 core (GPL-2.0
 cargo test --workspace --all-features
 ./interop-tests/fetch-c-sources.sh
 cargo test --manifest-path interop-tests/Cargo.toml --release
+RUSTFLAGS="--cfg loom" cargo test -p openamp-metal --test loom --release
+cargo +nightly miri test --workspace --all-features   # MIRIFLAGS=-Zmiri-disable-isolation
+(cd fuzz && cargo +nightly fuzz run rpmsg_recv -- -detect_leaks=0)
 ```
+
+`PROPTEST_CASES` raises the number of cases the property tests run.
 
 ## License
 

@@ -36,14 +36,49 @@ jobs:
         env:
           RUSTDOCFLAGS: -D warnings
 
+  features:
+    name: feature combinations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack
+      - run: >
+          cargo hack check --feature-powerset --depth 2
+          -p openamp-metal -p openamp-virtio -p openamp-rpmsg -p openamp-remoteproc -p openamp-proxy
+
+  deny:
+    name: licences, advisories, sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  semver:
+    name: semver checks (release PRs)
+    if: github.event_name == 'pull_request' && startsWith(github.head_ref, 'release')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          # Not on crates.io yet: compare with the branch being merged into.
+          baseline-rev: ${{ github.event.pull_request.base.sha }}
+
   embedded:
-    name: embedded (${{ matrix.target }})
+    name: embedded (${{ matrix.target }}, ${{ matrix.features }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - target: thumbv7em-none-eabihf
             features: openamp-metal/cortex-m7,openamp-rpmsg/async
+          - target: thumbv7em-none-eabihf
+            features: openamp-metal/critical-section,openamp-rpmsg/defmt,openamp-proxy/embedded-io
           - target: thumbv7m-none-eabi
             features: openamp-rpmsg/async
           - target: armv7a-none-eabi

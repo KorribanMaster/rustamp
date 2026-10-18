@@ -12,3 +12,13 @@ open-amp's `lib/remoteproc`.
   `RprocVirtio`; lifecycle `config` → `load` → `start` → `stop` →
   `shutdown`.
 * `rsc::ResourceTable`: a bounds-checked parser usable on both sides.
+
+## Features
+
+None are on by default.
+
+| Feature | Adds |
+|---|---|
+| `std` | `ImageStore` for `std::fs::File` |
+| `log` | Diagnostics through the [`log`](https://docs.rs/log) facade |
+| `defmt` | Diagnostics through [`defmt`](https://docs.rs/defmt), and `defmt::Format` on the error types (if both are on, `log` is used) |
