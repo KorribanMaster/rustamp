@@ -3,7 +3,7 @@
 //! port of open-amp's `lib/rpmsg`, wire-compatible with the Linux kernel's
 //! `virtio_rpmsg_bus` and with C OpenAMP.
 //!
-//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/rustamp):
 //!
 //! ```text
 //! rustamp-proxy ──► rustamp-rpmsg ──────┐

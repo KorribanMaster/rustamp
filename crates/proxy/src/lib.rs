@@ -3,7 +3,7 @@
 //! `lib/proxy` (`rpmsg_retarget`), wire-compatible with the C
 //! implementation and `rpmsg-proxy-app`.
 //!
-//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/rustamp):
 //!
 //! ```text
 //! rustamp-proxy ──► rustamp-rpmsg ──────┐

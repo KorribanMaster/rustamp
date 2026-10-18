@@ -2,7 +2,7 @@
 //! Hardware and OS abstraction for OpenAMP: a `no_std` port of
 //! [libmetal](https://github.com/OpenAMP/libmetal).
 //!
-//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/rustamp):
 //!
 //! ```text
 //! rustamp-proxy ──► rustamp-rpmsg ──────┐

@@ -5,7 +5,7 @@
 //! Virtio is OpenAMP's media-access layer: rpmsg messages travel in buffers
 //! passed through two vrings in shared memory.
 //!
-//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/rustamp):
 //!
 //! ```text
 //! rustamp-proxy ──► rustamp-rpmsg ──────┐

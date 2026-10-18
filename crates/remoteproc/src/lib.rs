@@ -3,7 +3,7 @@
 //! a `no_std` port of open-amp's `lib/remoteproc`, compatible with Linux
 //! remoteproc.
 //!
-//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/rustamp):
 //!
 //! ```text
 //! rustamp-proxy ──► rustamp-rpmsg ──────┐
