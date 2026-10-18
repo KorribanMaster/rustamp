@@ -7,46 +7,7 @@
 //! is built instead, since the tests never use the device API.
 
 use std::env;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
-fn run(cmd: &mut Command) {
-    let status = cmd
-        .status()
-        .unwrap_or_else(|e| panic!("failed to spawn {cmd:?}: {e}"));
-    assert!(status.success(), "command failed: {cmd:?}");
-}
-
-fn cc() -> String {
-    env::var("CC").unwrap_or_else(|_| "cc".into())
-}
-
-fn static_lib(out: &Path, name: &str, src: &Path, includes: &[&Path]) {
-    let obj = out.join(format!("{name}.o"));
-    let mut c = Command::new(cc());
-    c.args(["-c", "-O2", "-fPIC", "-Wall", "-Wextra"]);
-    for i in includes {
-        c.arg("-I").arg(i);
-    }
-    run(c.arg(src).arg("-o").arg(&obj));
-    let lib = out.join(format!("lib{name}.a"));
-    let _ = std::fs::remove_file(&lib);
-    run(Command::new("ar").arg("rcs").arg(&lib).arg(&obj));
-}
-
-fn cmake(src: &Path, build: &Path, defs: &[String]) {
-    let mut c = Command::new("cmake");
-    c.arg("-S").arg(src).arg("-B").arg(build);
-    c.arg("-DCMAKE_BUILD_TYPE=Release");
-    for d in defs {
-        c.arg(format!("-D{d}"));
-    }
-    run(&mut c);
-    run(Command::new("cmake")
-        .arg("--build")
-        .arg(build)
-        .args(["--target", "install", "-j", "4"]));
-}
+use std::path::PathBuf;
 
 fn main() {
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -61,41 +22,55 @@ fn main() {
         src.display()
     );
     let stub = manifest.join("c/stub-sysfs");
-    let inst = out.join("inst");
 
-    static_lib(&out, "sysfs", &stub.join("stub.c"), &[&stub]);
-    let sysfs = [
-        format!("LIBSYSFS_INCLUDE_DIR={}", stub.display()),
-        format!("LIBSYSFS_LIBRARY={}", out.join("libsysfs.a").display()),
-        format!("CMAKE_INSTALL_PREFIX={}", inst.display()),
-        "WITH_SHARED_LIB=OFF".into(),
-    ];
-    let mut defs = sysfs.to_vec();
-    defs.extend(["WITH_TESTS=OFF", "WITH_DOC=OFF", "WITH_EXAMPLES=OFF"].map(String::from));
-    cmake(&metal_src, &out.join("build-metal"), &defs);
+    // Static libraries must be linked after their users, so the link
+    // directives are emitted below, in order, rather than by `cc`.
+    cc::Build::new()
+        .file(stub.join("stub.c"))
+        .include(&stub)
+        .extra_warnings(true)
+        .cargo_metadata(false)
+        .compile("sysfs");
 
-    let mut defs = sysfs.to_vec();
-    defs.extend([
-        format!("CMAKE_INCLUDE_PATH={}", inst.join("include").display()),
-        format!("CMAKE_LIBRARY_PATH={}", inst.join("lib").display()),
-        format!("CMAKE_C_FLAGS=-I{}", stub.display()),
-        "WITH_PROXY=ON".into(),
-    ]);
-    cmake(&oa_src, &out.join("build-oa"), &defs);
+    let sysfs = |c: &mut cmake::Config| {
+        c.profile("Release")
+            .define("LIBSYSFS_INCLUDE_DIR", &stub)
+            .define("LIBSYSFS_LIBRARY", out.join("libsysfs.a"))
+            .define("WITH_SHARED_LIB", "OFF");
+    };
+    let mut metal = cmake::Config::new(&metal_src);
+    sysfs(&mut metal);
+    let metal = metal
+        .out_dir(out.join("metal"))
+        .define("WITH_TESTS", "OFF")
+        .define("WITH_DOC", "OFF")
+        .define("WITH_EXAMPLES", "OFF")
+        .build();
 
-    static_lib(
-        &out,
-        "interop_glue",
-        &manifest.join("c/glue.c"),
+    let mut oa = cmake::Config::new(&oa_src);
+    sysfs(&mut oa);
+    let oa = oa
+        .out_dir(out.join("open-amp"))
+        .define("CMAKE_INCLUDE_PATH", metal.join("include"))
+        .define("CMAKE_LIBRARY_PATH", metal.join("lib"))
+        .cflag(format!("-I{}", stub.display()))
+        .define("WITH_PROXY", "ON")
+        .build();
+
+    cc::Build::new()
+        .file(manifest.join("c/glue.c"))
+        .include(metal.join("include"))
+        .include(oa.join("include"))
+        .include(&stub)
         // rpmsg_internal.h, for the private wire structures.
-        &[&inst.join("include"), &stub, &oa_src.join("lib/rpmsg")],
-    );
+        .include(oa_src.join("lib/rpmsg"))
+        .extra_warnings(true)
+        .cargo_metadata(false)
+        .compile("interop_glue");
 
-    println!("cargo:rustc-link-search=native={}", out.display());
-    println!(
-        "cargo:rustc-link-search=native={}",
-        inst.join("lib").display()
-    );
+    for dir in [out.clone(), oa.join("lib"), metal.join("lib")] {
+        println!("cargo:rustc-link-search=native={}", dir.display());
+    }
     for l in ["interop_glue", "open_amp", "metal", "sysfs"] {
         println!("cargo:rustc-link-lib=static={l}");
     }

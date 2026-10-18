@@ -17,3 +17,7 @@ openamp-metal = { path = "../crates/metal", features = ["std"] }
 openamp-virtio = { path = "../crates/virtio" }
 openamp-rpmsg = { path = "../crates/rpmsg" }
 openamp-remoteproc = { path = "../crates/remoteproc" }
+
+[build-dependencies]
+cc = "1.2"
+cmake = "0.1"
