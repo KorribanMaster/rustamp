@@ -27,6 +27,7 @@ openamp-virtio = { path = "crates/virtio", version = "0.1.0", default-features =
 openamp-rpmsg = { path = "crates/rpmsg", version = "0.1.0", default-features = false }
 openamp-remoteproc = { path = "crates/remoteproc", version = "0.1.0", default-features = false }
 openamp-proxy = { path = "crates/proxy", version = "0.1.0", default-features = false }
+critical-section = { version = "1.2", default-features = false }
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

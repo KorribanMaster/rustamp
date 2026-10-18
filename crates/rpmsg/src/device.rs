@@ -207,8 +207,10 @@ impl<const E: usize> State<E> {
 /// An rpmsg device over a virtio transport.
 ///
 /// * `T`: the virtio transport (a remoteproc vdev, virtio-mmio, ...).
-/// * `L`: the lock protecting internal state; see
-///   [`openamp_metal::sync`] for when to replace the default spin lock.
+/// * `L`: the lock protecting internal state. The default spin lock must not
+///   be taken from an interrupt handler; if you call rpmsg from one, use
+///   `openamp_metal::sync::CsLock` (feature `openamp-metal/critical-section`).
+///   See [`openamp_metal::sync`].
 /// * `E`: maximum number of local endpoints.
 ///
 /// All methods take `&self`, so the device can be shared between threads or

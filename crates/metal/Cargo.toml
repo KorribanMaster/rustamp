@@ -22,6 +22,15 @@ linux = ["std"]
 # Cache maintenance for the core this crate is compiled for.
 cortex-m7 = []
 armv7a = []
+# `sync::CsLock`: a lock that masks interrupts, for rpmsg used from interrupt
+# handlers. The application links a `critical-section` implementation.
+critical-section = ["dep:critical-section"]
+
+[dependencies]
+critical-section = { workspace = true, optional = true }
+
+[dev-dependencies]
+critical-section = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

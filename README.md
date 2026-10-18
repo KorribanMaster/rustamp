@@ -82,7 +82,9 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 * **No allocator, no dependencies.** Sizes are const generics; the workspace
   builds offline. Locks are pluggable (`RawLock`); the default spin lock is
   right as long as rpmsg is never called from an interrupt handler, which the
-  API steers towards (the handler just calls `on_notify` or sets a flag).
+  API steers towards (the handler just calls `on_notify` or sets a flag). If
+  you do call rpmsg from an interrupt handler, use `CsLock` (feature
+  `openamp-metal/critical-section`).
 * **Polled first, async on top.** `try_recv`/`send` work everywhere; the
   `async` feature adds `recv().await` and `send_async().await` for Embassy,
   RTIC or any executor.
