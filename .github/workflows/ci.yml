@@ -16,7 +16,7 @@ jobs:
       matrix:
         rust: [stable, "1.85"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
@@ -26,7 +26,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -53,7 +53,7 @@ jobs:
           - target: riscv32imac-unknown-none-elf
             features: openamp-rpmsg/async
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -65,7 +65,7 @@ jobs:
   example-imx8mn:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: thumbv7em-none-eabihf
@@ -77,7 +77,7 @@ jobs:
         run: |
           elf=examples/imx8mn-m7-echo/target/thumbv7em-none-eabihf/release/imx8mn-m7-echo
           readelf -SW "$elf" | grep -E '\.resource_table +PROGBITS +2001f000'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: imx8mn-m7-echo
           path: examples/imx8mn-m7-echo/target/thumbv7em-none-eabihf/release/imx8mn-m7-echo
@@ -93,7 +93,7 @@ jobs:
           - board: arria10
             flags: --no-default-features --features arria10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: armv7a-none-eabi
@@ -113,7 +113,7 @@ jobs:
           readelf -hW "$elf" | grep -E 'Entry point address: +0x3e000000'
           readelf -SW "$elf" | grep -E '\.resource_table +PROGBITS +3ef00000'
           mv "$elf" "$elf-${{ matrix.board }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: cortex-a9-rtu-echo-${{ matrix.board }}
           path: examples/cortex-a9-rtu-echo/target/armv7a-none-eabi/release/cortex-a9-rtu-echo-${{ matrix.board }}
@@ -122,7 +122,7 @@ jobs:
     name: interop with C open-amp
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y cmake
       - run: ./interop-tests/fetch-c-sources.sh
@@ -131,7 +131,7 @@ jobs:
   miri:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri

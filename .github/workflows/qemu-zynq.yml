@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: armv7a-none-eabi
@@ -23,7 +23,7 @@ jobs:
           sudo apt-get install -y ninja-build pkg-config libglib2.0-dev \
             libpixman-1-dev python3-venv clang lld llvm flex bison bc \
             device-tree-compiler
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             qemu-work/qemu-build
@@ -42,7 +42,7 @@ jobs:
           make -C linux/a9-rproc KDIR="$w/linux-mod" ARCH=arm LLVM=1 \
             KBUILD_MODPOST_WARN=1 W=1 KCFLAGS=-Werror
           ls -l linux/a9-rproc/a9_rproc.ko
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: qemu-zynq-logs
