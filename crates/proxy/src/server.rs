@@ -278,7 +278,7 @@ mod tests {
 
     fn tmpdir(tag: &str) -> PathBuf {
         let d =
-            std::env::temp_dir().join(std::format!("openamp-proxy-{tag}-{}", std::process::id()));
+            std::env::temp_dir().join(std::format!("rustamp-proxy-{tag}-{}", std::process::id()));
         std::fs::create_dir_all(&d).unwrap();
         d
     }

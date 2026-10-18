@@ -137,11 +137,11 @@ version = "0.1.0"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
- "openamp-metal",
- "openamp-remoteproc",
- "openamp-rpmsg",
- "openamp-virtio",
  "panic-halt",
+ "rustamp-metal",
+ "rustamp-remoteproc",
+ "rustamp-rpmsg",
+ "rustamp-virtio",
 ]
 
 [[package]]
@@ -221,37 +221,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
-name = "openamp-metal"
-version = "0.1.0"
-dependencies = [
- "critical-section",
- "loom",
-]
-
-[[package]]
-name = "openamp-remoteproc"
-version = "0.1.0"
-dependencies = [
- "openamp-metal",
- "openamp-virtio",
-]
-
-[[package]]
-name = "openamp-rpmsg"
-version = "0.1.0"
-dependencies = [
- "openamp-metal",
- "openamp-virtio",
-]
-
-[[package]]
-name = "openamp-virtio"
-version = "0.1.0"
-dependencies = [
- "openamp-metal",
-]
-
-[[package]]
 name = "panic-halt"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -297,6 +266,37 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+
+[[package]]
+name = "rustamp-metal"
+version = "0.1.0"
+dependencies = [
+ "critical-section",
+ "loom",
+]
+
+[[package]]
+name = "rustamp-remoteproc"
+version = "0.1.0"
+dependencies = [
+ "rustamp-metal",
+ "rustamp-virtio",
+]
+
+[[package]]
+name = "rustamp-rpmsg"
+version = "0.1.0"
+dependencies = [
+ "rustamp-metal",
+ "rustamp-virtio",
+]
+
+[[package]]
+name = "rustamp-virtio"
+version = "0.1.0"
+dependencies = [
+ "rustamp-metal",
+]
 
 [[package]]
 name = "rustc_version"

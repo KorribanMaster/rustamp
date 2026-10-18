@@ -7,9 +7,9 @@ use core::fmt;
 #[non_exhaustive]
 pub enum Error {
     /// Shared-memory access failed.
-    Metal(openamp_metal::Error),
+    Metal(rustamp_metal::Error),
     /// The virtqueue layer failed (often: the peer published bad indices).
-    Virtio(openamp_virtio::Error),
+    Virtio(rustamp_virtio::Error),
     /// No transmit buffer is free (`RPMSG_ERR_NO_BUFF`).
     NoBuffer,
     /// The payload does not fit in a buffer (`RPMSG_ERR_BUFF_SIZE`).
@@ -35,14 +35,14 @@ pub enum Error {
 /// Shorthand for `core::result::Result<T, Error>`.
 pub type Result<T> = core::result::Result<T, Error>;
 
-impl From<openamp_metal::Error> for Error {
-    fn from(e: openamp_metal::Error) -> Self {
+impl From<rustamp_metal::Error> for Error {
+    fn from(e: rustamp_metal::Error) -> Self {
         Error::Metal(e)
     }
 }
 
-impl From<openamp_virtio::Error> for Error {
-    fn from(e: openamp_virtio::Error) -> Self {
+impl From<rustamp_virtio::Error> for Error {
+    fn from(e: rustamp_virtio::Error) -> Self {
         Error::Virtio(e)
     }
 }
@@ -99,8 +99,8 @@ mod tests {
     }
 
     const ALL: [Error; 11] = [
-        Error::Metal(openamp_metal::Error::OutOfBounds),
-        Error::Virtio(openamp_virtio::Error::QueueFull),
+        Error::Metal(rustamp_metal::Error::OutOfBounds),
+        Error::Virtio(rustamp_virtio::Error::QueueFull),
         Error::NoBuffer,
         Error::MessageTooLarge,
         Error::NoEndpointSlot,
@@ -116,8 +116,8 @@ mod tests {
     fn messages_and_conversions() {
         use std::string::ToString;
         check_messages(&ALL);
-        let m = openamp_metal::Error::OutOfBounds;
-        let v = openamp_virtio::Error::QueueFull;
+        let m = rustamp_metal::Error::OutOfBounds;
+        let v = rustamp_virtio::Error::QueueFull;
         assert_eq!(Error::from(m), Error::Metal(m));
         assert_eq!(Error::from(v), Error::Virtio(v));
         assert!(Error::Virtio(v).to_string().contains(&v.to_string()));

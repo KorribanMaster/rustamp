@@ -3,12 +3,12 @@
 //! port of open-amp's `lib/rpmsg`, wire-compatible with the Linux kernel's
 //! `virtio_rpmsg_bus` and with C OpenAMP.
 //!
-//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
 //!
 //! ```text
-//! openamp-proxy ──► openamp-rpmsg ──────┐
-//!                                       ├──► openamp-virtio ──► openamp-metal
-//! openamp-remoteproc ───────────────────┘
+//! rustamp-proxy ──► rustamp-rpmsg ──────┐
+//!                                       ├──► rustamp-virtio ──► rustamp-metal
+//! rustamp-remoteproc ───────────────────┘
 //!   (supplies the virtio Transport that rpmsg runs over)
 //! ```
 //!
@@ -23,7 +23,7 @@
 //! Linux binds a driver to them (`rpmsg-tty` gives `/dev/ttyRPMSG*`).
 //!
 //! * Remote (virtio device role): [`RpmsgVirtio::new_remote`], usually over
-//!   `openamp_remoteproc::RprocVirtio`.
+//!   `rustamp_remoteproc::RprocVirtio`.
 //! * Host (virtio driver role, owns the buffers): [`RpmsgVirtio::new_host`].
 //!
 //! The API is polled first. [`RpmsgVirtio::try_recv`] returns one message or
@@ -33,8 +33,8 @@
 //! ([`RpmsgVirtio::get_tx_buffer`]).
 //!
 //! ```no_run
-//! # use openamp_rpmsg::*;
-//! # fn demo<T: openamp_virtio::Transport>(rpmsg: RpmsgVirtio<T>) -> Result<()> {
+//! # use rustamp_rpmsg::*;
+//! # fn demo<T: rustamp_virtio::Transport>(rpmsg: RpmsgVirtio<T>) -> Result<()> {
 //! // Announced to the host as "rpmsg-tty".
 //! let ept = rpmsg.create_endpoint("rpmsg-tty", ADDR_ANY, ADDR_ANY)?;
 //! loop {
@@ -48,7 +48,7 @@
 //! The lock type `L` of [`RpmsgVirtio`] defaults to a spin lock, which must
 //! not be taken from an interrupt handler. Call [`RpmsgVirtio::on_notify`]
 //! from the interrupt and do the work in thread context. If you do need rpmsg
-//! in an interrupt handler, use `openamp_metal::sync::CsLock`.
+//! in an interrupt handler, use `rustamp_metal::sync::CsLock`.
 //!
 //! # Features
 //!

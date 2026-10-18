@@ -6,7 +6,7 @@
 //! ELF32 and ELF64 little-endian images are supported; segments are placed
 //! at their physical address (`p_paddr`), as Linux remoteproc does.
 
-use openamp_metal::IoRegion;
+use rustamp_metal::IoRegion;
 
 use crate::{Error, Result};
 

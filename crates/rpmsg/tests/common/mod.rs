@@ -5,10 +5,10 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use openamp_metal::IoRegion;
-use openamp_metal::shmem::ShmemPool;
-use openamp_virtio::ring::VringLayout;
-use openamp_virtio::{QueueConfig, Result, Role, Transport, VIRTIO_ID_RPMSG};
+use rustamp_metal::IoRegion;
+use rustamp_metal::shmem::ShmemPool;
+use rustamp_virtio::ring::VringLayout;
+use rustamp_virtio::{QueueConfig, Result, Role, Transport, VIRTIO_ID_RPMSG};
 
 pub const SHM_PHYS: u64 = 0x6000_0000;
 pub const SHM_SIZE: usize = 0x10_0000;
@@ -114,7 +114,7 @@ impl Transport for Sim {
             .queues
             .get(index)
             .cloned()
-            .ok_or(openamp_virtio::Error::NoSuchQueue)
+            .ok_or(rustamp_virtio::Error::NoSuchQueue)
     }
     fn notify(&self, index: usize) {
         self.sh.kicks[index].fetch_add(1, Ordering::SeqCst);

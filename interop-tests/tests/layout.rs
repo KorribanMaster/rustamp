@@ -6,12 +6,12 @@ use core::mem::{offset_of, size_of};
 use std::collections::BTreeMap;
 use std::ffi::CStr;
 
-use openamp_interop_tests::{c_layout_count, c_layout_name, c_layout_value};
-use openamp_remoteproc::rsc::{
+use rustamp_interop_tests::{c_layout_count, c_layout_name, c_layout_value};
+use rustamp_remoteproc::rsc::{
     FwRscCarveout, FwRscTrace, FwRscVdev, FwRscVdevVring, RscTableHeader,
 };
-use openamp_rpmsg::wire::{HDR_SIZE, Header, NS_MSG_SIZE, NsMsg};
-use openamp_rpmsg::{NAME_SIZE, Name};
+use rustamp_rpmsg::wire::{HDR_SIZE, Header, NS_MSG_SIZE, NsMsg};
+use rustamp_rpmsg::{NAME_SIZE, Name};
 
 fn c_layout() -> BTreeMap<String, usize> {
     // SAFETY: plain functions over a static table; names are NUL-terminated

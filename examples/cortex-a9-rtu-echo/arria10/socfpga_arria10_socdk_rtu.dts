@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Arria 10 SoCDK (SD/MMC boot) with CPU1 handed to the openamp-rs RTU.
+ * Arria 10 SoCDK (SD/MMC boot) with CPU1 handed to the RustAmp RTU.
  *
  * Boot Linux with maxcpus=1. CPU1 is held in reset by the reset manager
  * until the a9-rproc driver releases it ("socfpga-a10" start method, the
@@ -14,7 +14,7 @@
 #include "socfpga_arria10_socdk_sdmmc.dts"
 
 / {
-	model = "Altera SOCFPGA Arria 10 + openamp-rs RTU on CPU1";
+	model = "Altera SOCFPGA Arria 10 + RustAmp RTU on CPU1";
 
 	reserved-memory {
 		#address-cells = <1>;
@@ -44,15 +44,15 @@
 	};
 
 	remoteproc-cpu1 {
-		compatible = "openamp-rs,cortex-a9-rproc";
+		compatible = "rustamp,cortex-a9-rproc";
 		interrupt-parent = <&intc>;
 		memory-region = <&vdev0buffer>, <&vdev0vring0>, <&vdev0vring1>, <&rtu_fw>;
-		openamp-rs,cpu = <1>;
-		openamp-rs,tx-sgi = <15>;
-		openamp-rs,rx-sgi = <14>;
-		openamp-rs,start-method = "socfpga-a10";
+		rustamp,cpu = <1>;
+		rustamp,tx-sgi = <15>;
+		rustamp,rx-sgi = <14>;
+		rustamp,start-method = "socfpga-a10";
 		altr,rst-mgr = <&rst>;
 		altr,sys-mgr = <&sysmgr>;
-		openamp-rs,park-addr = <0x3efff000>;
+		rustamp,park-addr = <0x3efff000>;
 	};
 };

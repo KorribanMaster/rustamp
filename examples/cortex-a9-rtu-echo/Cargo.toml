@@ -10,10 +10,10 @@ publish = false
 [workspace]
 
 [dependencies]
-openamp-metal = { path = "../../crates/metal" }
-openamp-virtio = { path = "../../crates/virtio", default-features = false }
-openamp-rpmsg = { path = "../../crates/rpmsg" }
-openamp-remoteproc = { path = "../../crates/remoteproc" }
+rustamp-metal = { path = "../../crates/metal" }
+rustamp-virtio = { path = "../../crates/virtio", default-features = false }
+rustamp-rpmsg = { path = "../../crates/rpmsg" }
+rustamp-remoteproc = { path = "../../crates/remoteproc" }
 
 [features]
 default = ["zynq7000"]

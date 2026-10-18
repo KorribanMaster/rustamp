@@ -5,9 +5,9 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use openamp_metal::IoRegion;
-use openamp_remoteproc::rsc::ResourceTable;
-use openamp_remoteproc::{Remoteproc, RemoteprocOps};
+use rustamp_metal::IoRegion;
+use rustamp_remoteproc::rsc::ResourceTable;
+use rustamp_remoteproc::{Remoteproc, RemoteprocOps};
 
 const MEM_SIZE: usize = 0x2_0000;
 /// Inputs longer than this skip the resource-table-only pass.
@@ -24,14 +24,14 @@ struct Sim {
 }
 
 impl RemoteprocOps for Sim {
-    fn mmap(&mut self, da: u64, size: usize) -> openamp_remoteproc::Result<IoRegion> {
-        let da = usize::try_from(da).map_err(|_| openamp_remoteproc::Error::NoMemory)?;
+    fn mmap(&mut self, da: u64, size: usize) -> rustamp_remoteproc::Result<IoRegion> {
+        let da = usize::try_from(da).map_err(|_| rustamp_remoteproc::Error::NoMemory)?;
         Ok(self.mem.subregion(da, size)?)
     }
-    fn start(&mut self, _: u64) -> openamp_remoteproc::Result<()> {
+    fn start(&mut self, _: u64) -> rustamp_remoteproc::Result<()> {
         Ok(())
     }
-    fn stop(&mut self) -> openamp_remoteproc::Result<()> {
+    fn stop(&mut self) -> rustamp_remoteproc::Result<()> {
         Ok(())
     }
 }

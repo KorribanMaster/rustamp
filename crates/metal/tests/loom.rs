@@ -2,14 +2,14 @@
 //! Model checks of the lock-free code with loom:
 //!
 //! ```sh
-//! RUSTFLAGS="--cfg loom" cargo test -p openamp-metal --test loom --release
+//! RUSTFLAGS="--cfg loom" cargo test -p rustamp-metal --test loom --release
 //! ```
 #![cfg(loom)]
 
 use loom::sync::Arc;
 use loom::thread;
-use openamp_metal::irq::IrqTable;
-use openamp_metal::sync::{Mutex, RawSpinLock};
+use rustamp_metal::irq::IrqTable;
+use rustamp_metal::sync::{Mutex, RawSpinLock};
 
 #[test]
 fn spin_mutex_excludes() {

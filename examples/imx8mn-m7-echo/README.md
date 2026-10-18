@@ -64,8 +64,8 @@ cat /dev/ttyRPMSG0 & echo hello > /dev/ttyRPMSG0   # prints "hello"
 |---|---|
 | Runtime | `cortex-m-rt` (no `device` feature, so every interrupt reaches `DefaultHandler(irqn)`); `memory-tcm.x` (ITCM code, DTCM data), `memory-qemu.x` with `--features qemu-imx8mp` (DDR, sets VTOR). Panics halt (`panic-halt`); the QEMU build logs them on UART4 first |
 | Resource table (vdev, 2 × 256-entry vrings at fixed addresses) | `resource_table!` in `src/main.rs`, its own section at `0x2001F000` (`memory-tcm.x`) |
-| Locking | `CsLock` (feature `openamp-metal/critical-section`, implemented by `cortex-m`'s `critical-section-single-core`), so rpmsg stays correct even if called from an interrupt |
-| Virtio transport | `openamp_remoteproc::RprocVirtio::new_device` |
+| Locking | `CsLock` (feature `rustamp-metal/critical-section`, implemented by `cortex-m`'s `critical-section-single-core`), so rpmsg stays correct even if called from an interrupt |
+| Virtio transport | `rustamp_remoteproc::RprocVirtio::new_device` |
 | Kick Linux | MU channel 1 (`src/mu.rs`), value `notifyid << 16` |
 | Kicked by Linux | MU interrupt → `DefaultHandler` sets a flag → main loop polls `try_recv`, sleeps in `wfi` |
 | Caches | Off (reset state); MPU marks `0x55000000` uncached in case you enable them |

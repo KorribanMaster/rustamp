@@ -47,7 +47,7 @@ jobs:
           tool: cargo-hack
       - run: >
           cargo hack check --feature-powerset --depth 2
-          -p openamp-metal -p openamp-virtio -p openamp-rpmsg -p openamp-remoteproc -p openamp-proxy
+          -p rustamp-metal -p rustamp-virtio -p rustamp-rpmsg -p rustamp-remoteproc -p rustamp-proxy
 
   deny:
     name: licences, advisories, sources
@@ -76,17 +76,17 @@ jobs:
       matrix:
         include:
           - target: thumbv7em-none-eabihf
-            features: openamp-metal/cortex-m7,openamp-rpmsg/async
+            features: rustamp-metal/cortex-m7,rustamp-rpmsg/async
           - target: thumbv7em-none-eabihf
-            features: openamp-metal/critical-section,openamp-rpmsg/defmt,openamp-proxy/embedded-io
+            features: rustamp-metal/critical-section,rustamp-rpmsg/defmt,rustamp-proxy/embedded-io
           - target: thumbv7m-none-eabi
-            features: openamp-rpmsg/async
+            features: rustamp-rpmsg/async
           - target: armv7a-none-eabi
-            features: openamp-metal/armv7a,openamp-rpmsg/async
+            features: rustamp-metal/armv7a,rustamp-rpmsg/async
           - target: aarch64-unknown-none
-            features: openamp-rpmsg/async
+            features: rustamp-rpmsg/async
           - target: riscv32imac-unknown-none-elf
-            features: openamp-rpmsg/async
+            features: rustamp-rpmsg/async
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -94,7 +94,7 @@ jobs:
           targets: ${{ matrix.target }}
       - run: >
           cargo build --release --target ${{ matrix.target }} --no-default-features
-          -p openamp-metal -p openamp-virtio -p openamp-rpmsg -p openamp-remoteproc -p openamp-proxy
+          -p rustamp-metal -p rustamp-virtio -p rustamp-rpmsg -p rustamp-remoteproc -p rustamp-proxy
           --features ${{ matrix.features }}
 
   example-imx8mn:
@@ -202,6 +202,6 @@ jobs:
             ~/.cargo/registry
             target
           key: loom-${{ hashFiles('Cargo.lock') }}
-      - run: cargo test -p openamp-metal --test loom --release
+      - run: cargo test -p rustamp-metal --test loom --release
         env:
           RUSTFLAGS: --cfg loom

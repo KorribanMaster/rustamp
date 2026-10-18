@@ -2,11 +2,11 @@
 //! A virtio transport backed by a resource-table vdev
 //! (`remoteproc_virtio.c`).
 
-use openamp_metal::IoRegion;
-use openamp_metal::cache::{Cache, NoCache};
-use openamp_metal::notify::Notifier;
-use openamp_virtio::ring::VringLayout;
-use openamp_virtio::{QueueConfig, Role, Transport};
+use rustamp_metal::IoRegion;
+use rustamp_metal::cache::{Cache, NoCache};
+use rustamp_metal::notify::Notifier;
+use rustamp_virtio::ring::VringLayout;
+use rustamp_virtio::{QueueConfig, Role, Transport};
 
 use crate::rsc::{FW_RSC_ADDR_ANY, VdevRsc};
 
@@ -127,22 +127,22 @@ impl<N: Notifier> Transport for RprocVirtio<N> {
         self.vdev.gfeatures() as u64
     }
 
-    fn set_driver_features(&self, features: u64) -> openamp_virtio::Result<()> {
+    fn set_driver_features(&self, features: u64) -> rustamp_virtio::Result<()> {
         if self.role != Role::Driver {
-            return Err(openamp_virtio::Error::Unsupported);
+            return Err(rustamp_virtio::Error::Unsupported);
         }
         self.vdev.set_gfeatures(features as u32)?;
         self.flush();
         Ok(())
     }
 
-    fn read_config(&self, offset: usize, buf: &mut [u8]) -> openamp_virtio::Result<()> {
+    fn read_config(&self, offset: usize, buf: &mut [u8]) -> rustamp_virtio::Result<()> {
         if offset
             .checked_add(buf.len())
             .is_none_or(|e| e > self.vdev.config_len() as usize)
         {
-            return Err(openamp_virtio::Error::Metal(
-                openamp_metal::Error::OutOfBounds,
+            return Err(rustamp_virtio::Error::Metal(
+                rustamp_metal::Error::OutOfBounds,
             ));
         }
         Ok(self
@@ -151,13 +151,13 @@ impl<N: Notifier> Transport for RprocVirtio<N> {
             .read_bytes(self.vdev.config_offset() + offset, buf)?)
     }
 
-    fn write_config(&self, offset: usize, buf: &[u8]) -> openamp_virtio::Result<()> {
+    fn write_config(&self, offset: usize, buf: &[u8]) -> rustamp_virtio::Result<()> {
         if offset
             .checked_add(buf.len())
             .is_none_or(|e| e > self.vdev.config_len() as usize)
         {
-            return Err(openamp_virtio::Error::Metal(
-                openamp_metal::Error::OutOfBounds,
+            return Err(rustamp_virtio::Error::Metal(
+                rustamp_metal::Error::OutOfBounds,
             ));
         }
         self.vdev
@@ -171,13 +171,13 @@ impl<N: Notifier> Transport for RprocVirtio<N> {
         self.vdev.num_vrings()
     }
 
-    fn queue(&self, index: usize) -> openamp_virtio::Result<QueueConfig> {
+    fn queue(&self, index: usize) -> rustamp_virtio::Result<QueueConfig> {
         self.invalidate();
         let v = self.vdev.vring(index)?;
         if v.da == FW_RSC_ADDR_ANY {
-            return Err(openamp_virtio::Error::NotReady);
+            return Err(rustamp_virtio::Error::NotReady);
         }
-        let num = u16::try_from(v.num).map_err(|_| openamp_virtio::Error::BadLayout)?;
+        let num = u16::try_from(v.num).map_err(|_| rustamp_virtio::Error::BadLayout)?;
         let layout = VringLayout::new(num, v.align as usize)?;
         let offset = self.shm.phys_range_to_offset(v.da as u64, layout.size())?;
         Ok(QueueConfig {
@@ -279,8 +279,8 @@ mod tests {
         rv.write_config(3, b"XY").unwrap();
         rv.read_config(2, &mut c[..4]).unwrap();
         assert_eq!(&c[..4], b"gXYa");
-        let oob = Err(openamp_virtio::Error::Metal(
-            openamp_metal::Error::OutOfBounds,
+        let oob = Err(rustamp_virtio::Error::Metal(
+            rustamp_metal::Error::OutOfBounds,
         ));
         assert_eq!(rv.read_config(7, &mut [0; 2]), oob);
         assert_eq!(rv.write_config(usize::MAX, b"x"), oob);
@@ -289,7 +289,7 @@ mod tests {
         assert_eq!(rv.queue_count(), 2);
         let q = rv.queue(0).unwrap();
         assert_eq!((q.offset, q.notify_id, q.layout.num()), (0x1000, 1, 4));
-        assert_eq!(rv.queue(1).unwrap_err(), openamp_virtio::Error::NotReady);
+        assert_eq!(rv.queue(1).unwrap_err(), rustamp_virtio::Error::NotReady);
         assert!(rv.queue(2).is_err());
         assert_eq!(rv.vring_for_notifyid(2), Some(1));
         assert_eq!(rv.vring_for_notifyid(5), None);
@@ -306,7 +306,7 @@ mod tests {
         assert_eq!(rv.role(), Role::Device);
         assert_eq!(
             rv.set_driver_features(1),
-            Err(openamp_virtio::Error::Unsupported)
+            Err(rustamp_virtio::Error::Unsupported)
         );
     }
 
@@ -322,9 +322,9 @@ mod tests {
         let o = v.offset() + 28 + 20 + 8;
         v.io().write_u32(o, 3).unwrap();
         v.set_vring_da(1, VRING0_DA).unwrap();
-        assert_eq!(rv.queue(1).unwrap_err(), openamp_virtio::Error::BadLayout);
+        assert_eq!(rv.queue(1).unwrap_err(), rustamp_virtio::Error::BadLayout);
         // Too large for a u16.
         v.io().write_u32(o, 1 << 16).unwrap();
-        assert_eq!(rv.queue(1).unwrap_err(), openamp_virtio::Error::BadLayout);
+        assert_eq!(rv.queue(1).unwrap_err(), rustamp_virtio::Error::BadLayout);
     }
 }

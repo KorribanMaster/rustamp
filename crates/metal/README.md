@@ -1,6 +1,6 @@
-# openamp-metal
+# rustamp-metal
 
-Hardware and OS abstraction for [openamp-rs](../../README.md), a port of
+Hardware and OS abstraction for [RustAmp](../../README.md), a port of
 [libmetal](https://github.com/OpenAMP/libmetal). `no_std`; no dependencies
 with default features.
 

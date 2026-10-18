@@ -225,7 +225,7 @@ mod tests {
     #[test]
     #[cfg_attr(miri, ignore = "Miri cannot mmap files")]
     fn shared_file_is_shared_between_mappings() {
-        let path = std::env::temp_dir().join(format!("openamp-metal-test-{}", std::process::id()));
+        let path = std::env::temp_dir().join(format!("rustamp-metal-test-{}", std::process::id()));
         let a = map_shared_file(&path, 8192).unwrap().leak(0x1000_0000);
         let b = map_shared_file(&path, 8192).unwrap().leak(0x1000_0000);
         a.write_u32(4096, 0x1234_5678).unwrap();
@@ -242,7 +242,7 @@ mod tests {
 
     #[test]
     fn uio_from_fake_sysfs() {
-        let dir = std::env::temp_dir().join(format!("openamp-uio-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("rustamp-uio-{}", std::process::id()));
         let sys = dir.join("uio7");
         fs::create_dir_all(sys.join("maps/map0")).unwrap();
         fs::write(sys.join("name"), "vring-mem\n").unwrap();

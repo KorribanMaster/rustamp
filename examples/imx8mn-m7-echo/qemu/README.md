@@ -29,17 +29,17 @@ driven by mainline Linux `imx_rproc` on the emulated Cortex-A53s, with the
 [    1.762445] virtio_rpmsg_bus virtio0: rpmsg host is online
 [    1.762767] remoteproc remoteproc0: remote processor imx8mp-cm7 is now up
 [init] /dev/ttyRPMSG0 is up after 100 ms
-[init] PASS: 2000 round trips, 256712 bytes echoed by the openamp-rs firmware
+[init] PASS: 2000 round trips, 256712 bytes echoed by the RustAmp firmware
 ```
 
 M7 (UART4):
 
 ```text
-openamp-rs m7: up, waiting for the host (DRIVER_OK)
-openamp-rs m7: DRIVER_OK, ns=true
-openamp-rs m7: announced rpmsg-tty at 0x400
-openamp-rs m7: first message from 0x400
-openamp-rs m7: echoed 2000 messages, 256712 bytes
+rustamp m7: up, waiting for the host (DRIVER_OK)
+rustamp m7: DRIVER_OK, ns=true
+rustamp m7: announced rpmsg-tty at 0x400
+rustamp m7: first message from 0x400
+rustamp m7: echoed 2000 messages, 256712 bytes
 ```
 
 ## How the QEMU variant differs from the hardware build

@@ -4,12 +4,12 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use openamp_interop_tests::*;
-use openamp_metal::IoRegion;
-use openamp_metal::shmem::ShmemPool;
-use openamp_remoteproc::RprocVirtio;
-use openamp_remoteproc::rsc::ResourceTable;
-use openamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio};
+use rustamp_interop_tests::*;
+use rustamp_metal::IoRegion;
+use rustamp_metal::shmem::ShmemPool;
+use rustamp_remoteproc::RprocVirtio;
+use rustamp_remoteproc::rsc::ResourceTable;
+use rustamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio};
 
 const VRING_NUM: u32 = 16;
 const N: u32 = 20_000;

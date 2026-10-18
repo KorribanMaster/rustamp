@@ -45,19 +45,19 @@ on hardware.
 [    7.623349] remoteproc remoteproc0: stopped remote processor remoteproc-cpu1
 [init] reload 1: 2000 round trips, 256712 bytes echoed
 [init] reload 2: 2000 round trips, 256712 bytes echoed
-[init] PASS: 6000 round trips, 770136 bytes echoed by the openamp-rs firmware across 2 stop/start reloads
+[init] PASS: 6000 round trips, 770136 bytes echoed by the RustAmp firmware across 2 stop/start reloads
 ```
 
 RTU (UART0):
 
 ```text
-openamp-rs a9: up on zynq-7000 (PERIPHBASE 0xf8f00000), waiting for the host
-openamp-rs a9: DRIVER_OK, ns=true
-openamp-rs a9: announced rpmsg-tty at 0x400
-openamp-rs a9: first message from 0x400
-openamp-rs a9: echoed 2000 messages, 256712 bytes
-openamp-rs a9: stop requested after 2000 messages, parking
-openamp-rs a9: up on zynq-7000 (PERIPHBASE 0xf8f00000), waiting for the host
+rustamp a9: up on zynq-7000 (PERIPHBASE 0xf8f00000), waiting for the host
+rustamp a9: DRIVER_OK, ns=true
+rustamp a9: announced rpmsg-tty at 0x400
+rustamp a9: first message from 0x400
+rustamp a9: echoed 2000 messages, 256712 bytes
+rustamp a9: stop requested after 2000 messages, parking
+rustamp a9: up on zynq-7000 (PERIPHBASE 0xf8f00000), waiting for the host
 ...
 ```
 

@@ -120,7 +120,7 @@ mod tests {
     use super::*;
     use crate::ring::VringLayout;
     use core::cell::Cell;
-    use openamp_metal::IoRegion;
+    use rustamp_metal::IoRegion;
 
     /// A transport implementing only the required methods.
     struct Minimal {

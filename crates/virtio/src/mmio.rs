@@ -6,8 +6,8 @@
 
 use core::sync::atomic::{AtomicU32, Ordering};
 
-use openamp_metal::IoRegion;
-use openamp_metal::sync::SpinMutex;
+use rustamp_metal::IoRegion;
+use rustamp_metal::sync::SpinMutex;
 
 use crate::{Error, QueueConfig, Result, Role, Transport};
 

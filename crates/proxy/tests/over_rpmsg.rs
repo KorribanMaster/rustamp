@@ -9,9 +9,9 @@ use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 use common::Shared;
-use openamp_proxy::server::ProxyServer;
-use openamp_proxy::{Error, PROXY_ENDPOINT_NAME, ProxyClient, RpmsgChannel, flags};
-use openamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
+use rustamp_proxy::server::ProxyServer;
+use rustamp_proxy::{Error, PROXY_ENDPOINT_NAME, ProxyClient, RpmsgChannel, flags};
+use rustamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
 
 type Dev = RpmsgVirtio<common::Sim>;
 
@@ -65,7 +65,7 @@ fn printf_and_files_through_the_proxy() {
     }
 
     // Host: serve until told to stop.
-    let root = std::env::temp_dir().join(format!("openamp-proxy-rpmsg-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!("rustamp-proxy-rpmsg-{}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
     let out = Capture::default();
     let mut srv = ProxyServer::new(&root).with_stdio(
@@ -140,7 +140,7 @@ fn printf_and_files_through_the_proxy() {
             .open_file("missing.bin", flags::O_RDONLY, 0)
             .unwrap_err();
         assert_eq!(
-            openamp_proxy::FileError::from(e).kind(),
+            rustamp_proxy::FileError::from(e).kind(),
             ErrorKind::NotFound
         );
     }

@@ -5,12 +5,12 @@
 //! Virtio is OpenAMP's media-access layer: rpmsg messages travel in buffers
 //! passed through two vrings in shared memory.
 //!
-//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
 //!
 //! ```text
-//! openamp-proxy ──► openamp-rpmsg ──────┐
-//!                                       ├──► openamp-virtio ──► openamp-metal
-//! openamp-remoteproc ───────────────────┘
+//! rustamp-proxy ──► rustamp-rpmsg ──────┐
+//!                                       ├──► rustamp-virtio ──► rustamp-metal
+//! rustamp-remoteproc ───────────────────┘
 //!   (supplies the virtio Transport that rpmsg runs over)
 //! ```
 //!
@@ -24,7 +24,7 @@
 //! * [`DriverQueue`]: owns buffers and posts them (the host).
 //! * [`DeviceQueue`]: takes posted buffers and returns them (the remote).
 //! * [`Transport`]: status, feature negotiation, config space, queue
-//!   discovery and notification. Implemented by `openamp-remoteproc`
+//!   discovery and notification. Implemented by `rustamp-remoteproc`
 //!   (resource-table vdevs) and [`mmio::MmioTransport`].
 //!
 //! Everything the peer writes is untrusted. Bad indices, descriptor heads or
@@ -32,9 +32,9 @@
 //! out-of-bounds access.
 //!
 //! ```
-//! use openamp_metal::IoRegion;
-//! use openamp_virtio::ring::VringLayout;
-//! use openamp_virtio::{Buffer, DeviceQueue, DriverQueue, QueueConfig};
+//! use rustamp_metal::IoRegion;
+//! use rustamp_virtio::ring::VringLayout;
+//! use rustamp_virtio::{Buffer, DeviceQueue, DriverQueue, QueueConfig};
 //!
 //! let layout = VringLayout::new(8, 64)?;
 //! let cfg = QueueConfig {
@@ -50,7 +50,7 @@
 //! let buf = device.pop_avail()?.expect("posted");
 //! device.push_used(buf, 42)?; // "wrote 42 bytes"
 //! assert_eq!(driver.pop_used()?.map(|u| u.len), Some(42));
-//! # Ok::<(), openamp_virtio::Error>(())
+//! # Ok::<(), rustamp_virtio::Error>(())
 //! ```
 //!
 //! # Features

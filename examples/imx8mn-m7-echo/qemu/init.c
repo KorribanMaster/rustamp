@@ -262,7 +262,7 @@ static int run(void)
 	u64 total;
 	int cycle;
 
-	out("\n[init] openamp-rs QEMU rpmsg test\n");
+	out("\n[init] RustAmp QEMU rpmsg test\n");
 	out("[init] remoteproc0 state: ");
 	cat("/sys/class/remoteproc/remoteproc0/state");
 	if (write_file("/sys/class/remoteproc/remoteproc0/firmware",
@@ -303,7 +303,7 @@ static int run(void)
 	outnum((RELOAD_CYCLES + 1) * ROUNDS);
 	out(" round trips, ");
 	outnum(total);
-	out(" bytes echoed by the openamp-rs firmware");
+	out(" bytes echoed by the RustAmp firmware");
 	if (RELOAD_CYCLES) {
 		out(" across ");
 		outnum(RELOAD_CYCLES);

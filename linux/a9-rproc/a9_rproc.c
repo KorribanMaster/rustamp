@@ -402,15 +402,15 @@ static int a9_rproc_init_start_method(struct a9_rproc *priv)
 	const char *method = "release-addr";
 	u64 addr;
 
-	of_property_read_string(np, "openamp-rs,start-method", &method);
+	of_property_read_string(np, "rustamp,start-method", &method);
 	if (!strcmp(method, "release-addr")) {
 		priv->method = A9_START_RELEASE_ADDR;
-		if (of_property_read_u64(np, "openamp-rs,release-addr", &addr)) {
+		if (of_property_read_u64(np, "rustamp,release-addr", &addr)) {
 			u32 a32;
 
-			if (of_property_read_u32(np, "openamp-rs,release-addr", &a32))
+			if (of_property_read_u32(np, "rustamp,release-addr", &a32))
 				return dev_err_probe(dev, -EINVAL,
-						     "release-addr needs openamp-rs,release-addr\n");
+						     "release-addr needs rustamp,release-addr\n");
 			addr = a32;
 		}
 		priv->release_addr = addr;
@@ -464,17 +464,17 @@ static int a9_rproc_probe(struct platform_device *pdev)
 	priv->host_cpu = 0;
 	priv->tx_sgi = 15;
 	priv->rx_sgi = 14;
-	of_property_read_u32(np, "openamp-rs,cpu", &priv->cpu);
-	of_property_read_u32(np, "openamp-rs,host-cpu", &priv->host_cpu);
-	of_property_read_u32(np, "openamp-rs,tx-sgi", &priv->tx_sgi);
-	of_property_read_u32(np, "openamp-rs,rx-sgi", &priv->rx_sgi);
+	of_property_read_u32(np, "rustamp,cpu", &priv->cpu);
+	of_property_read_u32(np, "rustamp,host-cpu", &priv->host_cpu);
+	of_property_read_u32(np, "rustamp,tx-sgi", &priv->tx_sgi);
+	of_property_read_u32(np, "rustamp,rx-sgi", &priv->rx_sgi);
 	if (priv->tx_sgi < 8 || priv->tx_sgi > 15 || priv->rx_sgi < 8 ||
 	    priv->rx_sgi > 15 || priv->tx_sgi == priv->rx_sgi)
 		return dev_err_probe(dev, -EINVAL, "SGIs must be distinct, in 8..15\n");
 	if (priv->cpu > 7 || priv->cpu == priv->host_cpu)
-		return dev_err_probe(dev, -EINVAL, "bad openamp-rs,cpu\n");
-	if (of_property_read_u32(np, "openamp-rs,park-addr", &priv->park_addr))
-		return dev_err_probe(dev, -EINVAL, "missing openamp-rs,park-addr\n");
+		return dev_err_probe(dev, -EINVAL, "bad rustamp,cpu\n");
+	if (of_property_read_u32(np, "rustamp,park-addr", &priv->park_addr))
+		return dev_err_probe(dev, -EINVAL, "missing rustamp,park-addr\n");
 
 	ret = a9_rproc_init_start_method(priv);
 	if (ret)
@@ -485,7 +485,7 @@ static int a9_rproc_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	rproc->auto_boot = of_property_read_bool(np, "openamp-rs,auto-boot");
+	rproc->auto_boot = of_property_read_bool(np, "rustamp,auto-boot");
 	platform_set_drvdata(pdev, rproc);
 	ret = devm_rproc_add(dev, rproc);
 	if (ret)
@@ -504,7 +504,7 @@ static void a9_rproc_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id a9_rproc_of_match[] = {
-	{ .compatible = "openamp-rs,cortex-a9-rproc" },
+	{ .compatible = "rustamp,cortex-a9-rproc" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, a9_rproc_of_match);

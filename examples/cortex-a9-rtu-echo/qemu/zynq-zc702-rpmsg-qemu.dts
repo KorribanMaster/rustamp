@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * ZC702 with CPU1 handed to the openamp-rs RTU, for QEMU's xilinx-zynq-a9.
+ * ZC702 with CPU1 handed to the RustAmp RTU, for QEMU's xilinx-zynq-a9.
  *
  * Linux runs on CPU0 only (maxcpus=1 on the command line). The top 32 MiB
  * of the first GiB is the RTU's (see examples/cortex-a9-rtu-echo/src/board.rs).
@@ -11,7 +11,7 @@
 #include "zynq-zc702.dts"
 
 / {
-	model = "Xilinx ZC702 + openamp-rs RTU on CPU1 (QEMU)";
+	model = "Xilinx ZC702 + RustAmp RTU on CPU1 (QEMU)";
 
 	reserved-memory {
 		#address-cells = <1>;
@@ -43,14 +43,14 @@
 	};
 
 	remoteproc-cpu1 {
-		compatible = "openamp-rs,cortex-a9-rproc";
+		compatible = "rustamp,cortex-a9-rproc";
 		interrupt-parent = <&intc>;
 		memory-region = <&vdev0buffer>, <&vdev0vring0>, <&vdev0vring1>, <&rtu_fw>;
-		openamp-rs,cpu = <1>;
-		openamp-rs,tx-sgi = <15>;
-		openamp-rs,rx-sgi = <14>;
-		openamp-rs,start-method = "release-addr";
-		openamp-rs,release-addr = <0xfffffff0>;
-		openamp-rs,park-addr = <0x3efff000>;
+		rustamp,cpu = <1>;
+		rustamp,tx-sgi = <15>;
+		rustamp,rx-sgi = <14>;
+		rustamp,start-method = "release-addr";
+		rustamp,release-addr = <0xfffffff0>;
+		rustamp,park-addr = <0x3efff000>;
 	};
 };

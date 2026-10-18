@@ -3,7 +3,7 @@
 #
 # Builds everything from public sources and runs the rpmsg echo test on
 # QEMU's xilinx-zynq-a9 (two Cortex-A9 cores): Linux on CPU0, the
-# openamp-rs RTU firmware on CPU1.
+# RustAmp RTU firmware on CPU1.
 #
 #   QEMU   upstream release, unpatched (arm-softmmu)
 #   Linux  mainline, multi_v7 with the rpmsg/remoteproc path built in and

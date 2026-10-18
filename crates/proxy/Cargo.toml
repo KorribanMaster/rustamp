@@ -1,5 +1,5 @@
 [package]
-name = "openamp-proxy"
+name = "rustamp-proxy"
 description = "File and console I/O forwarding over rpmsg (rpmsg_retarget), remote client and host server"
 readme = "README.md"
 version.workspace = true
@@ -13,8 +13,8 @@ categories.workspace = true
 
 [features]
 default = ["rpmsg"]
-# `Channel` implementation over an openamp-rpmsg endpoint.
-rpmsg = ["dep:openamp-rpmsg", "dep:openamp-virtio", "dep:openamp-metal"]
+# `Channel` implementation over an rustamp-rpmsg endpoint.
+rpmsg = ["dep:rustamp-rpmsg", "dep:rustamp-virtio", "dep:rustamp-metal"]
 # Host-side server executing requests against the host filesystem.
 std = []
 # `ProxyClient::open_file`, returning a `ProxyFile` that implements
@@ -22,26 +22,26 @@ std = []
 embedded-io = ["dep:embedded-io"]
 # Diagnostics through the `log` or `defmt` facade. Without either, nothing is
 # logged.
-log = ["openamp-rpmsg?/log", "openamp-virtio?/log", "openamp-metal?/log"]
+log = ["rustamp-rpmsg?/log", "rustamp-virtio?/log", "rustamp-metal?/log"]
 defmt = [
     "dep:defmt",
-    "openamp-rpmsg?/defmt",
-    "openamp-virtio?/defmt",
-    "openamp-metal?/defmt",
+    "rustamp-rpmsg?/defmt",
+    "rustamp-virtio?/defmt",
+    "rustamp-metal?/defmt",
 ]
 
 [dependencies]
-openamp-rpmsg = { workspace = true, optional = true }
-openamp-virtio = { workspace = true, optional = true }
-openamp-metal = { workspace = true, optional = true }
+rustamp-rpmsg = { workspace = true, optional = true }
+rustamp-virtio = { workspace = true, optional = true }
+rustamp-metal = { workspace = true, optional = true }
 defmt = { workspace = true, optional = true }
 embedded-io = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
-openamp-metal = { workspace = true, features = ["std"] }
-openamp-virtio.workspace = true
-openamp-rpmsg.workspace = true
+rustamp-metal = { workspace = true, features = ["std"] }
+rustamp-virtio.workspace = true
+rustamp-rpmsg.workspace = true
 
 [lints]
 workspace = true

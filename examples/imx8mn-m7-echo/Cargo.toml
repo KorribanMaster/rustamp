@@ -10,10 +10,10 @@ publish = false
 [workspace]
 
 [dependencies]
-openamp-metal = { path = "../../crates/metal", features = ["cortex-m7", "critical-section"] }
-openamp-virtio = { path = "../../crates/virtio", default-features = false }
-openamp-rpmsg = { path = "../../crates/rpmsg" }
-openamp-remoteproc = { path = "../../crates/remoteproc" }
+rustamp-metal = { path = "../../crates/metal", features = ["cortex-m7", "critical-section"] }
+rustamp-virtio = { path = "../../crates/virtio", default-features = false }
+rustamp-rpmsg = { path = "../../crates/rpmsg" }
+rustamp-remoteproc = { path = "../../crates/remoteproc" }
 cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
 # Without the `device` feature: all 240 interrupt vectors go to
 # `DefaultHandler(irqn)`, which dispatches the MU interrupt.

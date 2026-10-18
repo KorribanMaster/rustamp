@@ -7,14 +7,14 @@ mod common;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use openamp_metal::IoRegion;
-use openamp_metal::shmem::ShmemPool;
-use openamp_remoteproc::resource_table;
-use openamp_remoteproc::rsc::{
+use rustamp_metal::IoRegion;
+use rustamp_metal::shmem::ShmemPool;
+use rustamp_remoteproc::resource_table;
+use rustamp_remoteproc::rsc::{
     FW_RSC_ADDR_ANY, FwRscCarveout, FwRscVdev, FwRscVdevVring, RSC_NOTIFY_ID_ANY, ResourceTable,
 };
-use openamp_remoteproc::{Error, Remoteproc, RemoteprocOps, RprocVirtio, State};
-use openamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio};
+use rustamp_remoteproc::{Error, Remoteproc, RemoteprocOps, RprocVirtio, State};
+use rustamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio};
 
 use common::{Seg, build_elf32};
 
@@ -72,15 +72,15 @@ struct SimOps {
 }
 
 impl RemoteprocOps for SimOps {
-    fn mmap(&mut self, da: u64, size: usize) -> openamp_remoteproc::Result<IoRegion> {
+    fn mmap(&mut self, da: u64, size: usize) -> rustamp_remoteproc::Result<IoRegion> {
         Ok(self.mem.subregion(da as usize, size)?)
     }
-    fn start(&mut self, entry: u64) -> openamp_remoteproc::Result<()> {
+    fn start(&mut self, entry: u64) -> rustamp_remoteproc::Result<()> {
         self.started_at = Some(entry);
         self.running = true;
         Ok(())
     }
-    fn stop(&mut self) -> openamp_remoteproc::Result<()> {
+    fn stop(&mut self) -> rustamp_remoteproc::Result<()> {
         self.running = false;
         Ok(())
     }

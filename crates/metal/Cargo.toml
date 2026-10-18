@@ -1,5 +1,5 @@
 [package]
-name = "openamp-metal"
+name = "rustamp-metal"
 description = "Hardware and OS abstraction layer for OpenAMP in Rust (a port of libmetal)"
 readme = "README.md"
 version.workspace = true
@@ -27,7 +27,7 @@ armv7a = []
 critical-section = ["dep:critical-section"]
 # Diagnostics through the `log` or `defmt` facade. Without either, nothing is
 # logged.
-# (openamp-metal itself does not log; `log` exists so features forward uniformly.)
+# (rustamp-metal itself does not log; `log` exists so features forward uniformly.)
 log = []
 defmt = ["dep:defmt"]
 

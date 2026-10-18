@@ -100,7 +100,7 @@ impl VringLayout {
     /// Offset of the used ring.
     #[inline]
     pub const fn used(&self) -> usize {
-        openamp_metal::align_up(self.avail() + 6 + 2 * self.num as usize, self.align)
+        rustamp_metal::align_up(self.avail() + 6 + 2 * self.num as usize, self.align)
     }
 
     /// Offset of `used.flags`.

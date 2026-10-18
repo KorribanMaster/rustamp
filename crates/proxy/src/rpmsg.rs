@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //! [`Channel`] over an rpmsg endpoint.
 
-use openamp_metal::sync::RawLock;
-use openamp_rpmsg::{Endpoint, Error, Received, RpmsgVirtio};
-use openamp_virtio::Transport;
+use rustamp_metal::sync::RawLock;
+use rustamp_rpmsg::{Endpoint, Error, Received, RpmsgVirtio};
+use rustamp_virtio::Transport;
 
 use crate::Channel;
 

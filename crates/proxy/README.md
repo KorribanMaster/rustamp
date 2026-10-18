@@ -1,6 +1,6 @@
-# openamp-proxy
+# rustamp-proxy
 
-File and console forwarding for [openamp-rs](../../README.md), a port of
+File and console forwarding for [RustAmp](../../README.md), a port of
 open-amp's `lib/proxy` (`rpmsg_retarget`), wire-compatible with the C
 implementation and `rpmsg-proxy-app`.
 

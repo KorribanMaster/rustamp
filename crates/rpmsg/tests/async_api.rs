@@ -8,8 +8,8 @@ mod common;
 use std::sync::Arc;
 
 use common::Shared;
-use openamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio};
 use pollster::block_on;
+use rustamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio};
 
 type Dev = RpmsgVirtio<common::Sim>;
 

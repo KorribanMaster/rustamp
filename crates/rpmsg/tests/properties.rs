@@ -5,11 +5,11 @@
 mod common;
 
 use common::{SHM_PHYS, SHM_SIZE, Shared, VRING_NUM};
-use openamp_rpmsg::wire::{HDR_SIZE, Header, NS_MSG_SIZE, NsMsg};
-use openamp_rpmsg::{
+use proptest::prelude::*;
+use rustamp_rpmsg::wire::{HDR_SIZE, Header, NS_MSG_SIZE, NsMsg};
+use rustamp_rpmsg::{
     ADDR_ANY, Error, HostConfig, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS,
 };
-use proptest::prelude::*;
 
 /// The default configuration (honouring `PROPTEST_CASES`), cut down to a
 /// few cases under Miri.

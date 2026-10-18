@@ -1,6 +1,6 @@
-# openamp-rpmsg
+# rustamp-rpmsg
 
-RPMsg over virtio for [openamp-rs](../../README.md), a port of open-amp's
+RPMsg over virtio for [RustAmp](../../README.md), a port of open-amp's
 `lib/rpmsg`. Wire-compatible with Linux `virtio_rpmsg_bus` and C OpenAMP.
 
 * Host (driver) and remote (device) roles: `RpmsgVirtio::new_host`,
@@ -23,5 +23,5 @@ None are on by default.
 | `log` | Diagnostics through the [`log`](https://docs.rs/log) facade |
 | `defmt` | Diagnostics through [`defmt`](https://docs.rs/defmt), and `defmt::Format` on the error types (if both are on, `log` is used) |
 
-To call rpmsg from an interrupt handler, use `openamp_metal::sync::CsLock` as
-the lock type (feature `openamp-metal/critical-section`).
+To call rpmsg from an interrupt handler, use `rustamp_metal::sync::CsLock` as
+the lock type (feature `rustamp-metal/critical-section`).

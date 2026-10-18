@@ -3,12 +3,12 @@
 
 use core::fmt;
 
-use openamp_metal::IoRegion;
-use openamp_metal::cache::{Cache, NoCache};
-use openamp_metal::shmem::ShmemPool;
-use openamp_metal::sync::{Mutex, RawLock, RawSpinLock};
-use openamp_metal::time::{Delay, SpinDelay};
-use openamp_virtio::{
+use rustamp_metal::IoRegion;
+use rustamp_metal::cache::{Cache, NoCache};
+use rustamp_metal::shmem::ShmemPool;
+use rustamp_metal::sync::{Mutex, RawLock, RawSpinLock};
+use rustamp_metal::time::{Delay, SpinDelay};
+use rustamp_virtio::{
     AvailBuf, Buffer, DeviceQueue, DriverQueue, Role, Transport, features, status,
 };
 
@@ -209,8 +209,8 @@ impl<const E: usize> State<E> {
 /// * `T`: the virtio transport (a remoteproc vdev, virtio-mmio, ...).
 /// * `L`: the lock protecting internal state. The default spin lock must not
 ///   be taken from an interrupt handler; if you call rpmsg from one, use
-///   `openamp_metal::sync::CsLock` (feature `openamp-metal/critical-section`).
-///   See [`openamp_metal::sync`].
+///   `rustamp_metal::sync::CsLock` (feature `rustamp-metal/critical-section`).
+///   See [`rustamp_metal::sync`].
 /// * `E`: maximum number of local endpoints.
 ///
 /// All methods take `&self`, so the device can be shared between threads or

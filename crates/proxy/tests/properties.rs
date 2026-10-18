@@ -5,12 +5,12 @@
 
 use std::path::Path;
 
-use openamp_proxy::server::ProxyServer;
-use openamp_proxy::wire::{
+use proptest::prelude::*;
+use rustamp_proxy::server::ProxyServer;
+use rustamp_proxy::wire::{
     CLOSE_SYSCALL_ID, OPEN_SYSCALL_ID, READ_SYSCALL_ID, SYSCALL_SIZE, Syscall, TERM_SYSCALL_ID,
     WRITE_SYSCALL_ID,
 };
-use proptest::prelude::*;
 
 /// The default configuration (honouring `PROPTEST_CASES`), cut down to a
 /// few cases under Miri.
@@ -115,7 +115,7 @@ proptest! {
         use std::sync::atomic::{AtomicU32, Ordering};
         static CASE: AtomicU32 = AtomicU32::new(0);
         let top = std::env::temp_dir().join(format!(
-            "openamp-proxy-prop-{}-{}",
+            "rustamp-proxy-prop-{}-{}",
             std::process::id(),
             CASE.fetch_add(1, Ordering::Relaxed)
         ));

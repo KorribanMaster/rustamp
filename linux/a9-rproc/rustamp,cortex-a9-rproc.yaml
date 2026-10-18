@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
 %YAML 1.2
 ---
-$id: http://devicetree.org/schemas/remoteproc/openamp-rs,cortex-a9-rproc.yaml#
+$id: http://devicetree.org/schemas/remoteproc/rustamp,cortex-a9-rproc.yaml#
 $schema: http://devicetree.org/meta-schemas/core.yaml#
 
 title: Spare Cortex-A9 core as a remote processor
@@ -19,7 +19,7 @@ description: |
 
 properties:
   compatible:
-    const: openamp-rs,cortex-a9-rproc
+    const: rustamp,cortex-a9-rproc
 
   memory-region:
     description: |
@@ -34,44 +34,44 @@ properties:
   firmware-name:
     maxItems: 1
 
-  openamp-rs,cpu:
+  rustamp,cpu:
     $ref: /schemas/types.yaml#/definitions/uint32
     description: Physical CPU number of the remote core.
     default: 1
 
-  openamp-rs,host-cpu:
+  rustamp,host-cpu:
     $ref: /schemas/types.yaml#/definitions/uint32
     description: CPU the remote sends its SGI to.
     default: 0
 
-  openamp-rs,tx-sgi:
+  rustamp,tx-sgi:
     $ref: /schemas/types.yaml#/definitions/uint32
     description: SGI Linux raises on the remote core.
     minimum: 8
     maximum: 15
     default: 15
 
-  openamp-rs,rx-sgi:
+  rustamp,rx-sgi:
     $ref: /schemas/types.yaml#/definitions/uint32
     description: SGI the remote raises on the host CPU.
     minimum: 8
     maximum: 15
     default: 14
 
-  openamp-rs,park-addr:
+  rustamp,park-addr:
     $ref: /schemas/types.yaml#/definitions/uint32
     description: Physical address of the 4 KiB park page (inside a carveout).
 
-  openamp-rs,start-method:
+  rustamp,start-method:
     enum: [release-addr, socfpga-a10]
     default: release-addr
     description: |
       How the core is started the first time. release-addr writes the entry
-      to openamp-rs,release-addr and wakes the core with SEV and the SGI
+      to rustamp,release-addr and wakes the core with SEV and the SGI
       (Zynq-7000 boot ROM: 0xfffffff0; QEMU boot stub: 0). socfpga-a10
       releases CPU1 through the Arria 10 reset manager.
 
-  openamp-rs,release-addr:
+  rustamp,release-addr:
     $ref: /schemas/types.yaml#/definitions/uint32
 
   altr,rst-mgr:
@@ -82,33 +82,33 @@ properties:
     $ref: /schemas/types.yaml#/definitions/phandle
     description: Arria 10 system manager with cpu1-start-addr (socfpga-a10).
 
-  openamp-rs,auto-boot:
+  rustamp,auto-boot:
     type: boolean
 
 required:
   - compatible
   - memory-region
-  - openamp-rs,park-addr
+  - rustamp,park-addr
 
 allOf:
   - if:
       properties:
-        openamp-rs,start-method:
+        rustamp,start-method:
           const: socfpga-a10
     then:
       required: [altr,rst-mgr, altr,sys-mgr]
     else:
-      required: [openamp-rs,release-addr]
+      required: [rustamp,release-addr]
 
 additionalProperties: false
 
 examples:
   - |
     remoteproc-cpu1 {
-        compatible = "openamp-rs,cortex-a9-rproc";
+        compatible = "rustamp,cortex-a9-rproc";
         interrupt-parent = <&intc>;
         memory-region = <&vdev0buffer>, <&vdev0vring0>, <&vdev0vring1>, <&rtu_fw>;
-        openamp-rs,start-method = "release-addr";
-        openamp-rs,release-addr = <0xfffffff0>;
-        openamp-rs,park-addr = <0x3efff000>;
+        rustamp,start-method = "release-addr";
+        rustamp,release-addr = <0xfffffff0>;
+        rustamp,park-addr = <0x3efff000>;
     };

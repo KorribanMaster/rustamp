@@ -4,11 +4,11 @@
 
 use std::collections::VecDeque;
 
-use openamp_metal::IoRegion;
-use openamp_virtio::{
+use proptest::prelude::*;
+use rustamp_metal::IoRegion;
+use rustamp_virtio::{
     AvailBuf, Buffer, DeviceQueue, DriverQueue, Error, QueueConfig, Used, ring::VringLayout,
 };
-use proptest::prelude::*;
 
 /// The default configuration (honouring `PROPTEST_CASES`), cut down to a
 /// few cases under Miri.
@@ -161,7 +161,7 @@ proptest! {
                     let free = num as usize - m.outstanding();
                     let r = drv.add(&chain);
                     if chain.len() > num as usize {
-                        prop_assert_eq!(r, Err(Error::Metal(openamp_metal::Error::InvalidParam)));
+                        prop_assert_eq!(r, Err(Error::Metal(rustamp_metal::Error::InvalidParam)));
                     } else if chain.len() > free {
                         prop_assert_eq!(r, Err(Error::QueueFull));
                     } else {

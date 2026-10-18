@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-3-Clause
 # Boots Linux on QEMU's imx8mp-evk (with the Cortex-M7 AMP series), starts
-# the openamp-rs firmware on the M7 and runs the rpmsg echo test from /init.
+# the RustAmp firmware on the M7 and runs the rpmsg echo test from /init.
 #
 # usage: run.sh QEMU KERNEL_IMAGE DTB INIT FIRMWARE [M7_LOG]
 set -eu

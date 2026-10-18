@@ -14,7 +14,7 @@
   cargo test --manifest-path interop-tests/Cargo.toml --release
   ```
 
-* `unsafe` code stays in `openamp-metal`'s `IoRegion` and the virtqueue, with
+* `unsafe` code stays in `rustamp-metal`'s `IoRegion` and the virtqueue, with
   a `// SAFETY:` comment on every block. Anything read from shared memory is
   validated before use; a misbehaving peer must produce an error, not a
   panic or out-of-bounds access.
@@ -34,7 +34,7 @@ together by `.github/workflows/release.yml`.
 3. After merging, tag the merge commit and push the tag:
 
    ```sh
-   git tag -a vX.Y.Z -m "openamp-rs X.Y.Z" && git push origin vX.Y.Z
+   git tag -a vX.Y.Z -m "RustAmp X.Y.Z" && git push origin vX.Y.Z
    ```
 
    The workflow checks that the tag matches the version, runs the tests,

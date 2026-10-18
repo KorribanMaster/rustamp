@@ -1,6 +1,6 @@
-# openamp-remoteproc
+# rustamp-remoteproc
 
-Remote processor support for [openamp-rs](../../README.md), a port of
+Remote processor support for [RustAmp](../../README.md), a port of
 open-amp's `lib/remoteproc`.
 
 * Firmware: `resource_table!` declares the table in `.resource_table` with

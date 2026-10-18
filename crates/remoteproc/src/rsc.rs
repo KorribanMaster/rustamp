@@ -15,7 +15,7 @@ use core::cell::UnsafeCell;
 use core::mem::{offset_of, size_of};
 use core::sync::atomic::Ordering;
 
-use openamp_metal::IoRegion;
+use rustamp_metal::IoRegion;
 
 use crate::{Error, Result};
 

@@ -9,7 +9,7 @@
 
 use core::sync::atomic::{Ordering, fence};
 
-use openamp_metal::IoRegion;
+use rustamp_metal::IoRegion;
 
 use crate::ring::{
     VRING_AVAIL_F_NO_INTERRUPT, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, VRING_USED_F_NO_NOTIFY,
@@ -123,7 +123,7 @@ impl Ring {
     fn new(cfg: &QueueConfig) -> Result<Self> {
         cfg.io.check(cfg.offset, cfg.layout.size())?;
         if (cfg.io.as_ptr() as usize + cfg.offset) % 16 != 0 {
-            return Err(Error::Metal(openamp_metal::Error::Misaligned));
+            return Err(Error::Metal(rustamp_metal::Error::Misaligned));
         }
         Ok(Ring {
             io: cfg.io.clone(),
@@ -259,7 +259,7 @@ impl DriverQueue {
     /// Posts a chain of buffers; returns the head descriptor index.
     pub fn add(&mut self, bufs: &[Buffer]) -> Result<u16> {
         if bufs.is_empty() || bufs.len() > self.ring.num() as usize {
-            return Err(Error::Metal(openamp_metal::Error::InvalidParam));
+            return Err(Error::Metal(rustamp_metal::Error::InvalidParam));
         }
         if bufs.len() > self.num_free as usize {
             return Err(Error::QueueFull);

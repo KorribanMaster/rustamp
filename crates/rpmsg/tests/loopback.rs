@@ -4,7 +4,7 @@
 mod common;
 
 use common::Shared;
-use openamp_rpmsg::{
+use rustamp_rpmsg::{
     ADDR_ANY, Error, HostConfig, NsKind, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS,
 };
 
@@ -24,7 +24,7 @@ fn pair(dfeatures: u32) -> (std::sync::Arc<Shared>, Dev, Dev) {
     (sh, host, remote)
 }
 
-fn expect_ns(dev: &Dev) -> openamp_rpmsg::NsEvent {
+fn expect_ns(dev: &Dev) -> rustamp_rpmsg::NsEvent {
     match dev.try_recv().unwrap() {
         Some(Received::NameService(e)) => e,
         other => panic!("expected NS event, got {other:?}"),

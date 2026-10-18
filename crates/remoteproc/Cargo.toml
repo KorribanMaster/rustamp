@@ -1,5 +1,5 @@
 [package]
-name = "openamp-remoteproc"
+name = "rustamp-remoteproc"
 description = "Remote processor lifecycle, ELF loading, resource tables and virtio transport for OpenAMP in Rust"
 readme = "README.md"
 version.workspace = true
@@ -14,22 +14,22 @@ categories.workspace = true
 [features]
 default = []
 # `ImageStore` for files.
-std = ["openamp-metal/std"]
+std = ["rustamp-metal/std"]
 # Diagnostics through the `log` or `defmt` facade. Without either, nothing is
 # logged.
-log = ["dep:log", "openamp-metal/log", "openamp-virtio/log"]
-defmt = ["dep:defmt", "openamp-metal/defmt", "openamp-virtio/defmt"]
+log = ["dep:log", "rustamp-metal/log", "rustamp-virtio/log"]
+defmt = ["dep:defmt", "rustamp-metal/defmt", "rustamp-virtio/defmt"]
 
 [dependencies]
-openamp-metal.workspace = true
-openamp-virtio.workspace = true
+rustamp-metal.workspace = true
+rustamp-virtio.workspace = true
 log = { workspace = true, optional = true }
 defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
-openamp-metal = { workspace = true, features = ["std"] }
-openamp-rpmsg.workspace = true
+rustamp-metal = { workspace = true, features = ["std"] }
+rustamp-rpmsg.workspace = true
 
 [lints]
 workspace = true

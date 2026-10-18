@@ -1,6 +1,6 @@
-# openamp-virtio
+# rustamp-virtio
 
-Virtio for [openamp-rs](../../README.md), a port of open-amp's `lib/virtio`
+Virtio for [RustAmp](../../README.md), a port of open-amp's `lib/virtio`
 and `lib/virtio_mmio`.
 
 * `ring::VringLayout`: the split-ring layout (identical to Linux's legacy

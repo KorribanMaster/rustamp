@@ -317,7 +317,7 @@ extern "C" fn rtu_fault(kind: u32, lr: u32) -> ! {
         asm!("mrc p15, 0, {0}, c6, c0, 0", out(reg) dfar, options(nomem, nostack));
     }
     crate::log!(
-        "openamp-rs a9: {} at lr={:#x} dfsr={:#x} dfar={:#x}",
+        "rustamp a9: {} at lr={:#x} dfsr={:#x} dfar={:#x}",
         what,
         lr,
         dfsr,

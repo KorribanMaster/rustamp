@@ -163,48 +163,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
-name = "openamp-fuzz"
-version = "0.0.0"
-dependencies = [
- "arbitrary",
- "libfuzzer-sys",
- "openamp-metal",
- "openamp-remoteproc",
- "openamp-rpmsg",
- "openamp-virtio",
-]
-
-[[package]]
-name = "openamp-metal"
-version = "0.1.0"
-dependencies = [
- "loom",
-]
-
-[[package]]
-name = "openamp-remoteproc"
-version = "0.1.0"
-dependencies = [
- "openamp-metal",
- "openamp-virtio",
-]
-
-[[package]]
-name = "openamp-rpmsg"
-version = "0.1.0"
-dependencies = [
- "openamp-metal",
- "openamp-virtio",
-]
-
-[[package]]
-name = "openamp-virtio"
-version = "0.1.0"
-dependencies = [
- "openamp-metal",
-]
-
-[[package]]
 name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -250,6 +208,48 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+
+[[package]]
+name = "rustamp-fuzz"
+version = "0.0.0"
+dependencies = [
+ "arbitrary",
+ "libfuzzer-sys",
+ "rustamp-metal",
+ "rustamp-remoteproc",
+ "rustamp-rpmsg",
+ "rustamp-virtio",
+]
+
+[[package]]
+name = "rustamp-metal"
+version = "0.1.0"
+dependencies = [
+ "loom",
+]
+
+[[package]]
+name = "rustamp-remoteproc"
+version = "0.1.0"
+dependencies = [
+ "rustamp-metal",
+ "rustamp-virtio",
+]
+
+[[package]]
+name = "rustamp-rpmsg"
+version = "0.1.0"
+dependencies = [
+ "rustamp-metal",
+ "rustamp-virtio",
+]
+
+[[package]]
+name = "rustamp-virtio"
+version = "0.1.0"
+dependencies = [
+ "rustamp-metal",
+]
 
 [[package]]
 name = "rustversion"

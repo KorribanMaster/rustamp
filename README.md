@@ -1,24 +1,35 @@
-# openamp-rs
+# RustAmp
 
-A Rust port of the [OpenAMP](https://www.openampproject.org/) C libraries
-[open-amp](https://github.com/OpenAMP/open-amp) and
+RustAmp is a Rust port of the [OpenAMP](https://www.openampproject.org/) C
+libraries [open-amp](https://github.com/OpenAMP/open-amp) and
 [libmetal](https://github.com/OpenAMP/libmetal): remoteproc, rpmsg, virtio,
 the I/O proxy, and the hardware abstraction they sit on. It is `no_std`,
-needs no allocator, has no dependencies with default features, and is
-wire-compatible with the Linux kernel and with C OpenAMP in both directions.
+needs no allocator and has no dependencies with default features.
+
+**It aims for maximum compatibility with OpenAMP.** It follows OpenAMP's
+design and protocol behaviour, uses the same wire formats and resource
+tables, and interoperates with the Linux kernel (remoteproc, `rpmsg_tty`,
+`rpmsg_char`) and with C OpenAMP in both directions; CI tests that against
+the C libraries. Where it deliberately differs, it says so
+([below](#behaviour-that-differs-from-c-on-purpose)).
+
+**About the name.** RustAmp is an independent project, not part of or
+endorsed by the OpenAMP project, a Linaro Community Project. It is called
+RustAmp, and its crates `rustamp-*`, so that the OpenAMP name stays with
+the official project.
 
 | Crate | Replaces | What it does |
 |---|---|---|
-| [`openamp-metal`](crates/metal) | libmetal | `IoRegion` (bounds-checked shared memory/MMIO), cache maintenance, locks, notifier/delay traits, shared-memory pool, Linux UIO backend |
-| [`openamp-virtio`](crates/virtio) | `lib/virtio`, `lib/virtio_mmio` | Split virtqueues in driver and device roles, event-idx, `Transport` trait, virtio-mmio driver |
-| [`openamp-rpmsg`](crates/rpmsg) | `lib/rpmsg` | Endpoints, name service, host and remote roles, zero-copy receive and send, optional `async` |
-| [`openamp-remoteproc`](crates/remoteproc) | `lib/remoteproc` | `resource_table!` for firmware, table parser, streaming ELF loader, lifecycle, resource-table virtio transport |
-| [`openamp-proxy`](crates/proxy) | `lib/proxy` | `rpmsg_retarget`-compatible file/console forwarding: `no_std` client, sandboxed host server |
+| [`rustamp-metal`](crates/metal) | libmetal | `IoRegion` (bounds-checked shared memory/MMIO), cache maintenance, locks, notifier/delay traits, shared-memory pool, Linux UIO backend |
+| [`rustamp-virtio`](crates/virtio) | `lib/virtio`, `lib/virtio_mmio` | Split virtqueues in driver and device roles, event-idx, `Transport` trait, virtio-mmio driver |
+| [`rustamp-rpmsg`](crates/rpmsg) | `lib/rpmsg` | Endpoints, name service, host and remote roles, zero-copy receive and send, optional `async` |
+| [`rustamp-remoteproc`](crates/remoteproc) | `lib/remoteproc` | `resource_table!` for firmware, table parser, streaming ELF loader, lifecycle, resource-table virtio transport |
+| [`rustamp-proxy`](crates/proxy) | `lib/proxy` | `rpmsg_retarget`-compatible file/console forwarding: `no_std` client, sandboxed host server |
 
 ```text
-openamp-proxy ──► openamp-rpmsg ──┐
-                                  ├──► openamp-virtio ──► openamp-metal
-openamp-remoteproc ───────────────┘          ▲
+rustamp-proxy ──► rustamp-rpmsg ──┐
+                                  ├──► rustamp-virtio ──► rustamp-metal
+rustamp-remoteproc ───────────────┘          ▲
         └─────────── supplies the virtio Transport that rpmsg runs over
 ```
 
@@ -94,7 +105,7 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
   rpmsg is never called from an interrupt handler, which the API steers
   towards (the handler just calls `on_notify` or sets a flag). If you do
   call rpmsg from an interrupt handler, use `CsLock` (feature
-  `openamp-metal/critical-section`).
+  `rustamp-metal/critical-section`).
 * **Polled first, async on top.** `try_recv`/`send` work everywhere; the
   `async` feature adds `recv().await` and `send_async().await` for Embassy,
   RTIC or any executor.
@@ -139,7 +150,7 @@ linux/           a9-rproc: remoteproc driver for a spare Cortex-A9 core (GPL-2.0
 cargo test --workspace --all-features
 ./interop-tests/fetch-c-sources.sh
 cargo test --manifest-path interop-tests/Cargo.toml --release
-RUSTFLAGS="--cfg loom" cargo test -p openamp-metal --test loom --release
+RUSTFLAGS="--cfg loom" cargo test -p rustamp-metal --test loom --release
 cargo +nightly miri test --workspace --all-features   # MIRIFLAGS=-Zmiri-disable-isolation
 (cd fuzz && cargo +nightly fuzz run rpmsg_recv -- -detect_leaks=0)
 ```
@@ -151,5 +162,8 @@ cargo +nightly miri test --workspace --all-features   # MIRIFLAGS=-Zmiri-disable
 BSD-3-Clause, like the C libraries this is derived from; see
 [LICENSE](LICENSE) and [NOTICE](NOTICE). Exceptions: the Linux driver in
 `linux/a9-rproc` is GPL-2.0-only (its binding GPL-2.0-only OR BSD-2-Clause),
-and the example device trees, which include Linux's, are GPL-2.0. OpenAMP is
-a Linaro Community Project; this repository is independent of it.
+and the example device trees, which include Linux's, are GPL-2.0.
+
+OpenAMP is a Linaro Community Project. RustAmp is independent of it; the
+OpenAMP name is used only to say what this is a port of and compatible
+with.

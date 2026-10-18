@@ -1,5 +1,5 @@
 [package]
-name = "openamp-virtio"
+name = "rustamp-virtio"
 description = "Virtio split virtqueues (driver and device roles) and transports for OpenAMP in Rust"
 readme = "README.md"
 version.workspace = true
@@ -17,16 +17,16 @@ default = ["mmio"]
 mmio = []
 # Diagnostics through the `log` or `defmt` facade. Without either, nothing is
 # logged.
-log = ["openamp-metal/log"]
-defmt = ["dep:defmt", "openamp-metal/defmt"]
+log = ["rustamp-metal/log"]
+defmt = ["dep:defmt", "rustamp-metal/defmt"]
 
 [dependencies]
-openamp-metal.workspace = true
+rustamp-metal.workspace = true
 defmt = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest.workspace = true
-openamp-metal = { workspace = true, features = ["std"] }
+rustamp-metal = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

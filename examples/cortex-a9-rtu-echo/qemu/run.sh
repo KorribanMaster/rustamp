@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-License-Identifier: BSD-3-Clause
-# Boots Linux on CPU0 of QEMU's xilinx-zynq-a9, which starts the openamp-rs
+# Boots Linux on CPU0 of QEMU's xilinx-zynq-a9, which starts the RustAmp
 # firmware on CPU1 and runs the rpmsg echo test from /init.
 #
 # Everything is placed with -device loader instead of -kernel: with -kernel

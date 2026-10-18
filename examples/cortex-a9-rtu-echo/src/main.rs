@@ -20,12 +20,12 @@ mod uart;
 use core::sync::atomic::Ordering;
 
 use cortex_a9_rtu_echo::board::{self, BOARD};
-use openamp_metal::IoRegion;
-use openamp_metal::sync::RawSpinLock;
-use openamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
-use openamp_remoteproc::{RprocVirtio, resource_table};
-use openamp_rpmsg::{ADDR_ANY, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
-use openamp_virtio::{Transport, VIRTIO_ID_RPMSG, status};
+use rustamp_metal::IoRegion;
+use rustamp_metal::sync::RawSpinLock;
+use rustamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
+use rustamp_remoteproc::{RprocVirtio, resource_table};
+use rustamp_rpmsg::{ADDR_ANY, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
+use rustamp_virtio::{Transport, VIRTIO_ID_RPMSG, status};
 
 /// Service name; `rpmsg-tty` binds the mainline tty driver.
 const SERVICE: &str = "rpmsg-tty";
@@ -51,7 +51,7 @@ pub(crate) fn main() -> ! {
     uart::init();
     let pb = rt::periphbase();
     log!(
-        "openamp-rs a9: up on {} (PERIPHBASE {:#x}), waiting for the host",
+        "rustamp a9: up on {} (PERIPHBASE {:#x}), waiting for the host",
         BOARD.name,
         pb
     );
@@ -75,7 +75,7 @@ pub(crate) fn main() -> ! {
     // Wait for virtio_rpmsg to set DRIVER_OK, parking if Linux stops us first.
     loop {
         if hw::stop_requested() {
-            log!("openamp-rs a9: stop requested before DRIVER_OK, parking");
+            log!("rustamp a9: stop requested before DRIVER_OK, parking");
             rt::park();
         }
         let s = transport.status();
@@ -93,11 +93,11 @@ pub(crate) fn main() -> ! {
     };
     let rpmsg: RpmsgVirtio<_, RawSpinLock, 4> =
         RpmsgVirtio::try_new_remote(transport, shm, opts).expect("rpmsg");
-    log!("openamp-rs a9: DRIVER_OK, ns={}", rpmsg.support_ns());
+    log!("rustamp a9: DRIVER_OK, ns={}", rpmsg.support_ns());
     let ept = rpmsg
         .create_endpoint(SERVICE, ADDR_ANY, ADDR_ANY)
         .expect("endpoint");
-    log!("openamp-rs a9: announced {} at {:#x}", SERVICE, ept.addr());
+    log!("rustamp a9: announced {} at {:#x}", SERVICE, ept.addr());
 
     let mut echoed: u32 = 0;
     let mut bytes: u64 = 0;
@@ -105,21 +105,21 @@ pub(crate) fn main() -> ! {
         while let Ok(Some(r)) = rpmsg.try_recv() {
             if let Received::Message(m) = r {
                 if echoed == 0 {
-                    log!("openamp-rs a9: first message from {:#x}", m.src());
+                    log!("rustamp a9: first message from {:#x}", m.src());
                 }
                 // The first message also binds `ept` to the tty's address.
                 if rpmsg.send_to(ept, m.src(), m.data()).is_ok() {
                     echoed += 1;
                     bytes += m.len() as u64;
                     if echoed.is_multiple_of(500) {
-                        log!("openamp-rs a9: echoed {} messages, {} bytes", echoed, bytes);
+                        log!("rustamp a9: echoed {} messages, {} bytes", echoed, bytes);
                     }
                 }
             }
         }
         if hw::stop_requested() {
             log!(
-                "openamp-rs a9: stop requested after {} messages, parking",
+                "rustamp a9: stop requested after {} messages, parking",
                 echoed
             );
             rt::park();
@@ -132,7 +132,7 @@ pub(crate) fn main() -> ! {
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo<'_>) -> ! {
-    log!("openamp-rs a9: panic: {}", info);
+    log!("rustamp a9: panic: {}", info);
     loop {
         // SAFETY: halts this core.
         unsafe { core::arch::asm!("wfi", options(nomem, nostack)) };

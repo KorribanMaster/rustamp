@@ -9,9 +9,9 @@ mod common;
 use arbitrary::Arbitrary;
 use common::{SHM_PHYS, SHM_SIZE, Shared, VRING_NUM};
 use libfuzzer_sys::fuzz_target;
-use openamp_metal::IoRegion;
-use openamp_rpmsg::wire::HDR_SIZE;
-use openamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
+use rustamp_metal::IoRegion;
+use rustamp_rpmsg::wire::HDR_SIZE;
+use rustamp_rpmsg::{ADDR_ANY, HostConfig, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
 
 type Dev = RpmsgVirtio<common::Sim>;
 

@@ -1,4 +1,4 @@
-openamp-rs is a Rust port of the OpenAMP C libraries open-amp
+RustAmp is a Rust port of the OpenAMP C libraries open-amp
 (https://github.com/OpenAMP/open-amp) and libmetal
 (https://github.com/OpenAMP/libmetal). It follows their design, protocol
 behaviour and wire formats, so portions of it are derivative works of:

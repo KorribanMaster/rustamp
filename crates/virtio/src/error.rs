@@ -7,7 +7,7 @@ use core::fmt;
 #[non_exhaustive]
 pub enum Error {
     /// A shared-memory access failed.
-    Metal(openamp_metal::Error),
+    Metal(rustamp_metal::Error),
     /// The ring has no free descriptors.
     QueueFull,
     /// The ring size or alignment is invalid.
@@ -27,8 +27,8 @@ pub enum Error {
 /// Shorthand for `core::result::Result<T, Error>`.
 pub type Result<T> = core::result::Result<T, Error>;
 
-impl From<openamp_metal::Error> for Error {
-    fn from(e: openamp_metal::Error) -> Self {
+impl From<rustamp_metal::Error> for Error {
+    fn from(e: rustamp_metal::Error) -> Self {
         Error::Metal(e)
     }
 }
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn messages_and_conversion() {
         use std::string::ToString;
-        let inner = openamp_metal::Error::Misaligned;
+        let inner = rustamp_metal::Error::Misaligned;
         check_messages(&[
             Error::Metal(inner),
             Error::QueueFull,

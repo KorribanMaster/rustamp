@@ -1,6 +1,6 @@
 [package]
-name = "openamp-interop-tests"
-description = "Wire-compatibility tests between openamp-rs and the C libmetal/open-amp libraries"
+name = "rustamp-interop-tests"
+description = "Wire-compatibility tests between RustAmp and the C libmetal/open-amp libraries"
 version = "0.0.0"
 edition = "2024"
 license = "BSD-3-Clause"
@@ -13,10 +13,10 @@ build = "build.rs"
 [workspace]
 
 [dependencies]
-openamp-metal = { path = "../crates/metal", features = ["std"] }
-openamp-virtio = { path = "../crates/virtio" }
-openamp-rpmsg = { path = "../crates/rpmsg" }
-openamp-remoteproc = { path = "../crates/remoteproc" }
+rustamp-metal = { path = "../crates/metal", features = ["std"] }
+rustamp-virtio = { path = "../crates/virtio" }
+rustamp-rpmsg = { path = "../crates/rpmsg" }
+rustamp-remoteproc = { path = "../crates/remoteproc" }
 
 [build-dependencies]
 cc = "1.2"

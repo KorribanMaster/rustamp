@@ -27,7 +27,7 @@ use panic_halt as _;
 #[cfg(feature = "qemu-imx8mp")]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    log!("openamp-rs m7: {}", info);
+    log!("rustamp m7: {}", info);
     loop {
         cortex_m::asm::wfi();
     }
@@ -41,12 +41,12 @@ mod uart;
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use cortex_m_rt::{entry, exception};
-use openamp_metal::IoRegion;
-use openamp_metal::sync::CsLock;
-use openamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
-use openamp_remoteproc::{RprocVirtio, resource_table};
-use openamp_rpmsg::{ADDR_ANY, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
-use openamp_virtio::VIRTIO_ID_RPMSG;
+use rustamp_metal::IoRegion;
+use rustamp_metal::sync::CsLock;
+use rustamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
+use rustamp_remoteproc::{RprocVirtio, resource_table};
+use rustamp_rpmsg::{ADDR_ANY, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
+use rustamp_virtio::VIRTIO_ID_RPMSG;
 
 use mu::{MU_B_BASE, MU_IRQ, Mu};
 
@@ -96,7 +96,7 @@ fn main() -> ! {
     #[cfg(feature = "qemu-imx8mp")]
     {
         uart::init();
-        log!("openamp-rs m7: up, waiting for the host (DRIVER_OK)");
+        log!("rustamp m7: up, waiting for the host (DRIVER_OK)");
     }
     #[cfg(not(feature = "qemu-imx8mp"))]
     {
@@ -123,11 +123,11 @@ fn main() -> ! {
     // CsLock keeps rpmsg correct even if it is called from an interrupt.
     let rpmsg: RpmsgVirtio<_, CsLock, 4> =
         RpmsgVirtio::new_remote(transport, shm, opts).expect("rpmsg");
-    log!("openamp-rs m7: DRIVER_OK, ns={}", rpmsg.support_ns());
+    log!("rustamp m7: DRIVER_OK, ns={}", rpmsg.support_ns());
     let ept = rpmsg
         .create_endpoint(SERVICE, ADDR_ANY, ADDR_ANY)
         .expect("endpoint");
-    log!("openamp-rs m7: announced {} at {:#x}", SERVICE, ept.addr());
+    log!("rustamp m7: announced {} at {:#x}", SERVICE, ept.addr());
 
     let mut echoed: u32 = 0;
     let mut bytes: u64 = 0;
@@ -135,14 +135,14 @@ fn main() -> ! {
         while let Ok(Some(r)) = rpmsg.try_recv() {
             if let Received::Message(m) = r {
                 if echoed == 0 {
-                    log!("openamp-rs m7: first message from {:#x}", m.src());
+                    log!("rustamp m7: first message from {:#x}", m.src());
                 }
                 // The first message also binds `ept` to the tty's address.
                 if rpmsg.send_to(ept, m.src(), m.data()).is_ok() {
                     echoed += 1;
                     bytes += m.len() as u64;
                     if echoed.is_multiple_of(500) {
-                        log!("openamp-rs m7: echoed {} messages, {} bytes", echoed, bytes);
+                        log!("rustamp m7: echoed {} messages, {} bytes", echoed, bytes);
                     }
                 }
             }

@@ -6,8 +6,8 @@ that Linux does not use: CPU1 of a Zynq-7000 or Arria 10 booted with
 with [`examples/cortex-a9-rtu-echo`](../../examples/cortex-a9-rtu-echo).
 
 * **Notifications:** SGIs both ways, with no kernel changes. The driver raises
-  `openamp-rs,tx-sgi` (15) on the remote by writing `GICD_SGIR`. It receives
-  `openamp-rs,rx-sgi` (14) by mapping it in the GIC's IRQ domain with a
+  `rustamp,tx-sgi` (15) on the remote by writing `GICD_SGIR`. It receives
+  `rustamp,rx-sgi` (14) by mapping it in the GIC's IRQ domain with a
   one-cell fwspec (`irq_create_fwspec_mapping()`, the same convention the GIC
   driver uses for its own IPIs) and `request_percpu_irq()`. Linux allocates
   only SGIs 0–7.
@@ -21,7 +21,7 @@ with [`examples/cortex-a9-rtu-echo`](../../examples/cortex-a9-rtu-echo).
 * **Memory:** `memory-region` entries become carveouts with da == pa; the
   first, `vdev0buffer`, is the rpmsg buffer pool.
 
-Binding: [`openamp-rs,cortex-a9-rproc.yaml`](openamp-rs,cortex-a9-rproc.yaml).
+Binding: [`rustamp,cortex-a9-rproc.yaml`](rustamp,cortex-a9-rproc.yaml).
 
 ## Build
 

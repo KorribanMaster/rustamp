@@ -1,5 +1,5 @@
 [package]
-name = "openamp-rpmsg"
+name = "rustamp-rpmsg"
 description = "RPMsg inter-processor messaging over virtio, compatible with Linux and OpenAMP"
 readme = "README.md"
 version.workspace = true
@@ -19,12 +19,12 @@ default = []
 async = ["dep:atomic-waker"]
 # Diagnostics through the `log` or `defmt` facade. Without either, nothing is
 # logged.
-log = ["dep:log", "openamp-metal/log", "openamp-virtio/log"]
-defmt = ["dep:defmt", "openamp-metal/defmt", "openamp-virtio/defmt"]
+log = ["dep:log", "rustamp-metal/log", "rustamp-virtio/log"]
+defmt = ["dep:defmt", "rustamp-metal/defmt", "rustamp-virtio/defmt"]
 
 [dependencies]
-openamp-metal.workspace = true
-openamp-virtio.workspace = true
+rustamp-metal.workspace = true
+rustamp-virtio.workspace = true
 atomic-waker = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 defmt = { workspace = true, optional = true }
@@ -32,7 +32,7 @@ defmt = { workspace = true, optional = true }
 [dev-dependencies]
 pollster.workspace = true
 proptest.workspace = true
-openamp-metal = { workspace = true, features = ["std"] }
+rustamp-metal = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

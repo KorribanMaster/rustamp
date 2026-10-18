@@ -3,12 +3,12 @@
 //! `lib/proxy` (`rpmsg_retarget`), wire-compatible with the C
 //! implementation and `rpmsg-proxy-app`.
 //!
-//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
 //!
 //! ```text
-//! openamp-proxy ──► openamp-rpmsg ──────┐
-//!                                       ├──► openamp-virtio ──► openamp-metal
-//! openamp-remoteproc ───────────────────┘
+//! rustamp-proxy ──► rustamp-rpmsg ──────┐
+//!                                       ├──► rustamp-virtio ──► rustamp-metal
+//! rustamp-remoteproc ───────────────────┘
 //!   (supplies the virtio Transport that rpmsg runs over)
 //! ```
 //!
@@ -20,13 +20,13 @@
 //!
 //! * [`ProxyClient`] (remote, `no_std`): the calls, and [`Stdout`] for
 //!   `core::fmt::Write`. Runs over any [`Channel`], such as
-//!   [`RpmsgChannel`] over an `openamp-rpmsg` endpoint.
+//!   [`RpmsgChannel`] over an `rustamp-rpmsg` endpoint.
 //! * [`server::ProxyServer`] (host): executes requests inside a root
 //!   directory it never lets the remote leave.
 //!
 //! ```no_run
-//! # use openamp_proxy::{flags, Channel, ProxyClient};
-//! # fn demo<C: Channel>(channel: C) -> Result<(), openamp_proxy::Error<C::Error>> {
+//! # use rustamp_proxy::{flags, Channel, ProxyClient};
+//! # fn demo<C: Channel>(channel: C) -> Result<(), rustamp_proxy::Error<C::Error>> {
 //! use core::fmt::Write;
 //!
 //! let mut proxy = ProxyClient::new(channel);

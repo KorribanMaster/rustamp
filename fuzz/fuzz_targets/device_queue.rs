@@ -5,9 +5,9 @@
 
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use openamp_metal::IoRegion;
-use openamp_virtio::ring::VringLayout;
-use openamp_virtio::{AvailBuf, DeviceQueue, QueueConfig};
+use rustamp_metal::IoRegion;
+use rustamp_virtio::ring::VringLayout;
+use rustamp_virtio::{AvailBuf, DeviceQueue, QueueConfig};
 
 #[derive(Arbitrary, Debug)]
 enum Op {

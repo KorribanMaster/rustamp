@@ -57,7 +57,7 @@ Boot with `maxcpus=1` (CPU1 must stay offline) and add the reserved memory
 and the remoteproc node. [`qemu/zynq-zc702-rpmsg-qemu.dts`](qemu/zynq-zc702-rpmsg-qemu.dts)
 (Zynq) and [`arria10/socfpga_arria10_socdk_rtu.dts`](arria10/socfpga_arria10_socdk_rtu.dts)
 (Arria 10) are complete examples; the binding is
-[`linux/a9-rproc/openamp-rs,cortex-a9-rproc.yaml`](../../linux/a9-rproc/openamp-rs,cortex-a9-rproc.yaml).
+[`linux/a9-rproc/rustamp,cortex-a9-rproc.yaml`](../../linux/a9-rproc/rustamp,cortex-a9-rproc.yaml).
 The RTU's UART also needs its clock left on: `clk_ignore_unused`, or a DT
 clock consumer.
 

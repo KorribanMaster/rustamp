@@ -22,11 +22,11 @@ keywords = ["openamp", "rpmsg", "remoteproc", "virtio", "amp"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [workspace.dependencies]
-openamp-metal = { path = "crates/metal", version = "0.1.0", default-features = false }
-openamp-virtio = { path = "crates/virtio", version = "0.1.0", default-features = false }
-openamp-rpmsg = { path = "crates/rpmsg", version = "0.1.0", default-features = false }
-openamp-remoteproc = { path = "crates/remoteproc", version = "0.1.0", default-features = false }
-openamp-proxy = { path = "crates/proxy", version = "0.1.0", default-features = false }
+rustamp-metal = { path = "crates/metal", version = "0.1.0", default-features = false }
+rustamp-virtio = { path = "crates/virtio", version = "0.1.0", default-features = false }
+rustamp-rpmsg = { path = "crates/rpmsg", version = "0.1.0", default-features = false }
+rustamp-remoteproc = { path = "crates/remoteproc", version = "0.1.0", default-features = false }
+rustamp-proxy = { path = "crates/proxy", version = "0.1.0", default-features = false }
 atomic-waker = { version = "1.1", default-features = false }
 embedded-io = { version = "0.7", default-features = false }
 libc = { version = "0.2", default-features = false }

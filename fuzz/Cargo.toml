@@ -1,5 +1,5 @@
 [package]
-name = "openamp-fuzz"
+name = "rustamp-fuzz"
 description = "libFuzzer targets for the parsers of peer-controlled data"
 version = "0.0.0"
 edition = "2024"
@@ -16,10 +16,10 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 arbitrary = { version = "1", features = ["derive"] }
-openamp-metal = { path = "../crates/metal", features = ["std"] }
-openamp-virtio = { path = "../crates/virtio" }
-openamp-rpmsg = { path = "../crates/rpmsg" }
-openamp-remoteproc = { path = "../crates/remoteproc" }
+rustamp-metal = { path = "../crates/metal", features = ["std"] }
+rustamp-virtio = { path = "../crates/virtio" }
+rustamp-rpmsg = { path = "../crates/rpmsg" }
+rustamp-remoteproc = { path = "../crates/remoteproc" }
 
 [[bin]]
 name = "remoteproc_load"

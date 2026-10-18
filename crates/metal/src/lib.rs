@@ -2,12 +2,12 @@
 //! Hardware and OS abstraction for OpenAMP: a `no_std` port of
 //! [libmetal](https://github.com/OpenAMP/libmetal).
 //!
-//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
 //!
 //! ```text
-//! openamp-proxy ──► openamp-rpmsg ──────┐
-//!                                       ├──► openamp-virtio ──► openamp-metal
-//! openamp-remoteproc ───────────────────┘
+//! rustamp-proxy ──► rustamp-rpmsg ──────┐
+//!                                       ├──► rustamp-virtio ──► rustamp-metal
+//! rustamp-remoteproc ───────────────────┘
 //!   (supplies the virtio Transport that rpmsg runs over)
 //! ```
 //!
@@ -18,7 +18,7 @@
 //!
 //! * [`IoRegion`]: bounds-checked volatile, atomic and block access to shared
 //!   memory or MMIO, with physical/device address translation. It is the only
-//!   place in openamp-rs that turns addresses into raw pointers.
+//!   place in RustAmp that turns addresses into raw pointers.
 //! * [`cache`]: data-cache maintenance for non-coherent shared memory.
 //! * [`notify::Notifier`], [`time::Delay`], [`irq`]: the per-board hooks
 //!   (inter-processor interrupt, waiting, interrupt dispatch).
@@ -28,7 +28,7 @@
 //! * [`linux`]: Linux userspace backend (UIO devices, shared-memory files).
 //!
 //! ```
-//! use openamp_metal::IoRegion;
+//! use rustamp_metal::IoRegion;
 //!
 //! // On firmware: `unsafe { IoRegion::new(virt, phys, len) }` over memory
 //! // reserved for OpenAMP. On a host, for tests:
@@ -37,7 +37,7 @@
 //! assert_eq!(shm.read_u32(0x10)?, 0xdead_beef);
 //! assert_eq!(shm.offset_to_phys(0x10), Some(0x5500_0010));
 //! assert!(shm.read_u32(0x1000).is_err()); // out of bounds is an error
-//! # Ok::<(), openamp_metal::Error>(())
+//! # Ok::<(), rustamp_metal::Error>(())
 //! ```
 //!
 //! # Features

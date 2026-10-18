@@ -3,12 +3,12 @@
 //! a `no_std` port of open-amp's `lib/remoteproc`, compatible with Linux
 //! remoteproc.
 //!
-//! Part of [openamp-rs](https://github.com/KorribanMaster/openamp-rs):
+//! Part of [RustAmp](https://github.com/KorribanMaster/openamp-rs):
 //!
 //! ```text
-//! openamp-proxy ──► openamp-rpmsg ──────┐
-//!                                       ├──► openamp-virtio ──► openamp-metal
-//! openamp-remoteproc ───────────────────┘
+//! rustamp-proxy ──► rustamp-rpmsg ──────┐
+//!                                       ├──► rustamp-virtio ──► rustamp-metal
+//! rustamp-remoteproc ───────────────────┘
 //!   (supplies the virtio Transport that rpmsg runs over)
 //! ```
 //!
@@ -26,14 +26,14 @@
 //! # Firmware (the remote)
 //!
 //! Declare the table with [`resource_table!`], then turn its vdev into the
-//! virtio [`Transport`](openamp_virtio::Transport) that rpmsg runs over:
+//! virtio [`Transport`](rustamp_virtio::Transport) that rpmsg runs over:
 //!
 //! ```no_run
-//! use openamp_metal::IoRegion;
-//! use openamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
-//! use openamp_remoteproc::{RprocVirtio, resource_table};
-//! use openamp_rpmsg::{Options, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
-//! use openamp_virtio::VIRTIO_ID_RPMSG;
+//! use rustamp_metal::IoRegion;
+//! use rustamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
+//! use rustamp_remoteproc::{RprocVirtio, resource_table};
+//! use rustamp_rpmsg::{Options, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
+//! use rustamp_virtio::VIRTIO_ID_RPMSG;
 //!
 //! resource_table! {
 //!     static RESOURCE_TABLE: RscTable = {
@@ -105,8 +105,8 @@ macro_rules! __count {
 /// and a `static` [`rsc::SharedTable`] holding it.
 ///
 /// ```
-/// use openamp_remoteproc::resource_table;
-/// use openamp_remoteproc::rsc::{FwRscCarveout, FwRscVdev, FwRscVdevVring, FW_RSC_ADDR_ANY};
+/// use rustamp_remoteproc::resource_table;
+/// use rustamp_remoteproc::rsc::{FwRscCarveout, FwRscVdev, FwRscVdevVring, FW_RSC_ADDR_ANY};
 ///
 /// resource_table! {
 ///     pub static RESOURCE_TABLE: MyTable = {

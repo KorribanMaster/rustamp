@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 //! Remote processor lifecycle (`remoteproc.c`).
 
-use openamp_metal::IoRegion;
-use openamp_metal::notify::Notifier;
-use openamp_metal::shmem::ShmemPool;
-use openamp_virtio::ring::VringLayout;
+use rustamp_metal::IoRegion;
+use rustamp_metal::notify::Notifier;
+use rustamp_metal::shmem::ShmemPool;
+use rustamp_virtio::ring::VringLayout;
 
 use crate::elf::{self, ImageStore};
 use crate::rsc::{Entry, FW_RSC_ADDR_ANY, RSC_NOTIFY_ID_ANY, ResourceTable, RscType};

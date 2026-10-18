@@ -7,9 +7,9 @@ use core::fmt;
 #[non_exhaustive]
 pub enum Error {
     /// Shared-memory access failed.
-    Metal(openamp_metal::Error),
+    Metal(rustamp_metal::Error),
     /// Virtio-level failure.
-    Virtio(openamp_virtio::Error),
+    Virtio(rustamp_virtio::Error),
     /// The firmware image is malformed or truncated.
     InvalidImage,
     /// The image is valid but uses something unsupported (big-endian, ...).
@@ -31,24 +31,24 @@ pub enum Error {
 /// Shorthand for `core::result::Result<T, Error>`.
 pub type Result<T> = core::result::Result<T, Error>;
 
-impl From<openamp_metal::Error> for Error {
-    fn from(e: openamp_metal::Error) -> Self {
+impl From<rustamp_metal::Error> for Error {
+    fn from(e: rustamp_metal::Error) -> Self {
         Error::Metal(e)
     }
 }
 
-impl From<openamp_virtio::Error> for Error {
-    fn from(e: openamp_virtio::Error) -> Self {
+impl From<rustamp_virtio::Error> for Error {
+    fn from(e: rustamp_virtio::Error) -> Self {
         Error::Virtio(e)
     }
 }
 
-impl From<Error> for openamp_virtio::Error {
+impl From<Error> for rustamp_virtio::Error {
     fn from(e: Error) -> Self {
         match e {
-            Error::Metal(m) => openamp_virtio::Error::Metal(m),
+            Error::Metal(m) => rustamp_virtio::Error::Metal(m),
             Error::Virtio(v) => v,
-            _ => openamp_virtio::Error::NotReady,
+            _ => rustamp_virtio::Error::NotReady,
         }
     }
 }
@@ -90,8 +90,8 @@ mod tests {
     #[test]
     fn messages_and_conversions() {
         use std::string::ToString;
-        let m = openamp_metal::Error::NoMemory;
-        let v = openamp_virtio::Error::BadLayout;
+        let m = rustamp_metal::Error::NoMemory;
+        let v = rustamp_virtio::Error::BadLayout;
         check_messages(&[
             Error::Metal(m),
             Error::Virtio(v),
@@ -110,13 +110,13 @@ mod tests {
         assert_eq!(Error::from(v), Error::Virtio(v));
         // Back into virtio errors, for the Transport implementation.
         assert_eq!(
-            openamp_virtio::Error::from(Error::Metal(m)),
-            openamp_virtio::Error::Metal(m)
+            rustamp_virtio::Error::from(Error::Metal(m)),
+            rustamp_virtio::Error::Metal(m)
         );
-        assert_eq!(openamp_virtio::Error::from(Error::Virtio(v)), v);
+        assert_eq!(rustamp_virtio::Error::from(Error::Virtio(v)), v);
         assert_eq!(
-            openamp_virtio::Error::from(Error::InvalidTable),
-            openamp_virtio::Error::NotReady
+            rustamp_virtio::Error::from(Error::InvalidTable),
+            rustamp_virtio::Error::NotReady
         );
     }
 }

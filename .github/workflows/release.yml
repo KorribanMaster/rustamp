@@ -29,7 +29,7 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
   # Dependency order.
-  CRATES: openamp-metal openamp-virtio openamp-rpmsg openamp-remoteproc openamp-proxy
+  CRATES: rustamp-metal rustamp-virtio rustamp-rpmsg rustamp-remoteproc rustamp-proxy
 
 jobs:
   verify:
@@ -46,7 +46,7 @@ jobs:
         id: version
         run: |
           version=$(cargo metadata --no-deps --format-version 1 |
-            jq -r '.packages[] | select(.name == "openamp-metal") | .version')
+            jq -r '.packages[] | select(.name == "rustamp-metal") | .version')
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [ "${GITHUB_REF_TYPE}" = tag ] && [ "${GITHUB_REF_NAME}" != "v$version" ]; then
             echo "::error::tag ${GITHUB_REF_NAME} does not match workspace version $version"
@@ -56,7 +56,7 @@ jobs:
       - run: cargo clippy --workspace --all-features --all-targets
       - run: >
           cargo build --release --target thumbv7em-none-eabihf --no-default-features
-          -p openamp-metal -p openamp-virtio -p openamp-rpmsg -p openamp-remoteproc -p openamp-proxy
+          -p rustamp-metal -p rustamp-virtio -p rustamp-rpmsg -p rustamp-remoteproc -p rustamp-proxy
       - name: docs as docs.rs builds them
         uses: dtolnay/rust-toolchain@nightly
       - run: cargo +nightly doc --workspace --all-features --no-deps
@@ -105,4 +105,4 @@ jobs:
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 ||
             gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes \
-              --title "openamp-rs $GITHUB_REF_NAME"
+              --title "RustAmp $GITHUB_REF_NAME"
