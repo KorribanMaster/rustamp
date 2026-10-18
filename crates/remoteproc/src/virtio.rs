@@ -194,3 +194,137 @@ impl<N: Notifier> Transport for RprocVirtio<N> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::rsc::ResourceTable;
+    use core::cell::RefCell;
+    use core::sync::atomic::{AtomicUsize, Ordering};
+    use std::vec::Vec;
+
+    const SHM_PHYS: u64 = 0x4000_0000;
+    const VRING0_DA: u32 = 0x4000_1000;
+
+    /// A table with one vdev: vring 0 placed, vring 1 still `ANY`, and an
+    /// 8-byte config space.
+    fn table() -> ResourceTable {
+        let mut b = Vec::new();
+        let w = |b: &mut Vec<u8>, v: u32| b.extend_from_slice(&v.to_le_bytes());
+        for v in [1, 1, 0, 0, 20] {
+            w(&mut b, v); // ver, num, reserved, offset[0]
+        }
+        for v in [3, 7, 9, 0b101, 0, 8] {
+            w(&mut b, v); // type, id, notifyid, dfeatures, gfeatures, config_len
+        }
+        b.extend_from_slice(&[0, 2, 0, 0]); // status, num_of_vrings, reserved
+        for v in [VRING0_DA, 16, 4, 1, 0, FW_RSC_ADDR_ANY, 16, 4, 2, 0] {
+            w(&mut b, v);
+        }
+        b.extend_from_slice(b"cfgspace");
+        let io = IoRegion::alloc(b.len(), 0);
+        io.write_bytes(0, &b).unwrap();
+        ResourceTable::new(io, 0, b.len()).unwrap()
+    }
+
+    fn shm() -> IoRegion {
+        IoRegion::alloc(0x4000, SHM_PHYS)
+    }
+
+    /// Counts cache operations on the resource table.
+    struct Counting {
+        flushes: AtomicUsize,
+        invalidates: AtomicUsize,
+    }
+
+    impl Cache for Counting {
+        fn flush(&self, _: *const u8, len: usize) {
+            assert_eq!(len, 28 + 2 * 20, "the vdev entry and its vrings");
+            self.flushes.fetch_add(1, Ordering::Relaxed);
+        }
+        fn invalidate(&self, _: *const u8, _: usize) {
+            self.invalidates.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn driver_negotiates_through_the_table() {
+        static CACHE: Counting = Counting {
+            flushes: AtomicUsize::new(0),
+            invalidates: AtomicUsize::new(0),
+        };
+        let kicks = RefCell::new(Vec::new());
+        let t = table();
+        let v = t.find_vdev(0).unwrap();
+        let rv =
+            RprocVirtio::new_driver(v, shm(), |id| kicks.borrow_mut().push(id)).with_cache(&CACHE);
+
+        assert_eq!(rv.role(), Role::Driver);
+        assert_eq!(rv.device_id(), 7);
+        assert_eq!(rv.device_features(), 0b101);
+        rv.set_driver_features(0b100).unwrap();
+        assert_eq!(rv.driver_features(), 0b100);
+        assert_eq!(rv.vdev().gfeatures(), 0b100);
+        rv.set_status(4);
+        assert_eq!(rv.status(), 4);
+        // Status changes notify the vdev's own notify id.
+        assert_eq!(*kicks.borrow(), [9]);
+        assert!(CACHE.flushes.load(Ordering::Relaxed) >= 2);
+        assert!(CACHE.invalidates.load(Ordering::Relaxed) >= 3);
+
+        // Config space, bounds-checked against config_len.
+        let mut c = [0u8; 8];
+        rv.read_config(0, &mut c).unwrap();
+        assert_eq!(&c, b"cfgspace");
+        rv.write_config(3, b"XY").unwrap();
+        rv.read_config(2, &mut c[..4]).unwrap();
+        assert_eq!(&c[..4], b"gXYa");
+        let oob = Err(openamp_virtio::Error::Metal(
+            openamp_metal::Error::OutOfBounds,
+        ));
+        assert_eq!(rv.read_config(7, &mut [0; 2]), oob);
+        assert_eq!(rv.write_config(usize::MAX, b"x"), oob);
+
+        // Vrings: located through their da; one not placed yet.
+        assert_eq!(rv.queue_count(), 2);
+        let q = rv.queue(0).unwrap();
+        assert_eq!((q.offset, q.notify_id, q.layout.num()), (0x1000, 1, 4));
+        assert_eq!(rv.queue(1).unwrap_err(), openamp_virtio::Error::NotReady);
+        assert!(rv.queue(2).is_err());
+        assert_eq!(rv.vring_for_notifyid(2), Some(1));
+        assert_eq!(rv.vring_for_notifyid(5), None);
+        rv.notify(1);
+        rv.notify(9); // no such vring: nothing sent
+        assert_eq!(*kicks.borrow(), [9, 2]);
+        let _ = rv.notifier();
+    }
+
+    #[test]
+    fn device_cannot_set_driver_features() {
+        let t = table();
+        let rv = RprocVirtio::new_device(t.find_vdev(0).unwrap(), shm(), |_: u32| {});
+        assert_eq!(rv.role(), Role::Device);
+        assert_eq!(
+            rv.set_driver_features(1),
+            Err(openamp_virtio::Error::Unsupported)
+        );
+    }
+
+    #[test]
+    fn bad_vrings_are_rejected() {
+        let t = table();
+        let v = t.find_vdev(0).unwrap();
+        let rv = RprocVirtio::new_driver(v.clone(), shm(), |_: u32| {});
+        // Outside shared memory.
+        v.set_vring_da(1, 0x1000).unwrap();
+        assert!(rv.queue(1).is_err());
+        // A ring size that is no power of two.
+        let o = v.offset() + 28 + 20 + 8;
+        v.io().write_u32(o, 3).unwrap();
+        v.set_vring_da(1, VRING0_DA).unwrap();
+        assert_eq!(rv.queue(1).unwrap_err(), openamp_virtio::Error::BadLayout);
+        // Too large for a u16.
+        v.io().write_u32(o, 1 << 16).unwrap();
+        assert_eq!(rv.queue(1).unwrap_err(), openamp_virtio::Error::BadLayout);
+    }
+}
