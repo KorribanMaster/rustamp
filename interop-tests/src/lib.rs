@@ -27,6 +27,13 @@ unsafe extern "C" {
     pub fn c_host_run(va: *mut c_void, pa: u64, size: usize, n: u32) -> i32;
     /// Notifications raised by the C remote (0) or host (1).
     pub fn c_peer_kicks(which: i32) -> i32;
+    /// Number of entries in the C layout table.
+    pub fn c_layout_count() -> usize;
+    /// Name of layout entry `i`: `struct` (its size) or `struct.field` (an
+    /// offset).
+    pub fn c_layout_name(i: usize) -> *const core::ffi::c_char;
+    /// Value of layout entry `i`.
+    pub fn c_layout_value(i: usize) -> usize;
 }
 
 /// The message the C host sends as number `seq` (mirrors `make_msg`).

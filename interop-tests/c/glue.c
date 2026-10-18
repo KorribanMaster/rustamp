@@ -15,6 +15,7 @@
  */
 #include <sched.h>
 #include <stdatomic.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -24,12 +25,15 @@
 #include <openamp/remoteproc_virtio.h>
 #include <openamp/rpmsg_virtio.h>
 
+/* struct rpmsg_hdr and struct rpmsg_ns_msg are private to open-amp. */
+#include "rpmsg_internal.h"
+
 #define VRING0_OFF   0x1000
 #define VRING1_OFF   0x5000
 #define POOL_OFF     0x10000
 #define VRING_ALIGN  4096
 #define SERVICE      "rpmsg-interop"
-#define RPMSG_HDR_SIZE 16 /* struct rpmsg_hdr is private to open-amp */
+#define RPMSG_HDR_SIZE sizeof(struct rpmsg_hdr)
 
 METAL_PACKED_BEGIN
 struct interop_rsc {
@@ -263,4 +267,74 @@ int c_host_run(void *va, uint64_t pa, size_t size, uint32_t n)
 int c_peer_kicks(int which)
 {
 	return atomic_load(which ? &host.kicks : &remote.kicks);
+}
+
+/*
+ * Sizes and field offsets of the wire structures, as the C headers define
+ * them, for comparison with the Rust definitions.
+ */
+#define SIZE(s) { #s, sizeof(struct s) }
+#define OFF(s, f) { #s "." #f, offsetof(struct s, f) }
+
+static const struct {
+	const char *name;
+	size_t value;
+} layout[] = {
+	SIZE(resource_table),
+	OFF(resource_table, ver),
+	OFF(resource_table, num),
+	OFF(resource_table, offset),
+	SIZE(fw_rsc_carveout),
+	OFF(fw_rsc_carveout, type),
+	OFF(fw_rsc_carveout, da),
+	OFF(fw_rsc_carveout, pa),
+	OFF(fw_rsc_carveout, len),
+	OFF(fw_rsc_carveout, flags),
+	OFF(fw_rsc_carveout, name),
+	SIZE(fw_rsc_trace),
+	OFF(fw_rsc_trace, type),
+	OFF(fw_rsc_trace, da),
+	OFF(fw_rsc_trace, len),
+	OFF(fw_rsc_trace, name),
+	SIZE(fw_rsc_vdev),
+	OFF(fw_rsc_vdev, type),
+	OFF(fw_rsc_vdev, id),
+	OFF(fw_rsc_vdev, notifyid),
+	OFF(fw_rsc_vdev, dfeatures),
+	OFF(fw_rsc_vdev, gfeatures),
+	OFF(fw_rsc_vdev, config_len),
+	OFF(fw_rsc_vdev, status),
+	OFF(fw_rsc_vdev, num_of_vrings),
+	OFF(fw_rsc_vdev, vring),
+	SIZE(fw_rsc_vdev_vring),
+	OFF(fw_rsc_vdev_vring, da),
+	OFF(fw_rsc_vdev_vring, align),
+	OFF(fw_rsc_vdev_vring, num),
+	OFF(fw_rsc_vdev_vring, notifyid),
+	OFF(fw_rsc_vdev_vring, reserved),
+	SIZE(rpmsg_hdr),
+	OFF(rpmsg_hdr, src),
+	OFF(rpmsg_hdr, dst),
+	OFF(rpmsg_hdr, reserved),
+	OFF(rpmsg_hdr, len),
+	OFF(rpmsg_hdr, flags),
+	SIZE(rpmsg_ns_msg),
+	OFF(rpmsg_ns_msg, name),
+	OFF(rpmsg_ns_msg, addr),
+	OFF(rpmsg_ns_msg, flags),
+};
+
+size_t c_layout_count(void)
+{
+	return sizeof(layout) / sizeof(layout[0]);
+}
+
+const char *c_layout_name(size_t i)
+{
+	return i < c_layout_count() ? layout[i].name : NULL;
+}
+
+size_t c_layout_value(size_t i)
+{
+	return i < c_layout_count() ? layout[i].value : 0;
 }

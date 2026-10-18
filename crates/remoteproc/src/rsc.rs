@@ -12,6 +12,7 @@
 //!   addresses), so the table is only ever accessed through the region.
 
 use core::cell::UnsafeCell;
+use core::mem::{offset_of, size_of};
 use core::sync::atomic::Ordering;
 
 use openamp_metal::IoRegion;
@@ -221,7 +222,6 @@ impl<const V: usize> FwRscVdev<V> {
 }
 
 const _: () = {
-    use core::mem::size_of;
     assert!(size_of::<RscTableHeader<2>>() == 24);
     assert!(size_of::<FwRscCarveout>() == 56);
     assert!(size_of::<FwRscTrace>() == 48);
@@ -352,17 +352,17 @@ impl ResourceTable {
     /// Validates the table at `base..base + len` of `io`.
     pub fn new(io: IoRegion, base: usize, len: usize) -> Result<Self> {
         io.check(base, len)?;
-        if len < 16 {
+        if len < HDR_SIZE {
             return Err(Error::InvalidTable);
         }
-        let ver = io.read_u32(base)?;
-        let num = io.read_u32(base + 4)?;
+        let ver = io.read_u32(base + HDR_VER)?;
+        let num = io.read_u32(base + HDR_NUM)?;
         if ver != RSC_TABLE_VERSION {
             return Err(Error::InvalidTable);
         }
         let hdr_len = (num as usize)
-            .checked_mul(4)
-            .and_then(|n| n.checked_add(16))
+            .checked_mul(size_of::<u32>())
+            .and_then(|n| n.checked_add(HDR_SIZE))
             .ok_or(Error::InvalidTable)?;
         if hdr_len > len {
             return Err(Error::InvalidTable);
@@ -370,7 +370,10 @@ impl ResourceTable {
         let t = ResourceTable { io, base, len, num };
         for i in 0..num {
             let off = t.raw_offset(i)?;
-            if off < hdr_len || off.checked_add(4).is_none_or(|e| e > len) || off % 4 != 0 {
+            if off < hdr_len
+                || off.checked_add(ENTRY_TYPE_SIZE).is_none_or(|e| e > len)
+                || off % align_of::<u32>() != 0
+            {
                 return Err(Error::InvalidTable);
             }
         }
@@ -403,7 +406,8 @@ impl ResourceTable {
     }
 
     fn raw_offset(&self, i: u32) -> Result<usize> {
-        Ok(self.io.read_u32(self.base + 16 + 4 * i as usize)? as usize)
+        let at = self.base + HDR_OFFSET + size_of::<u32>() * i as usize;
+        Ok(self.io.read_u32(at)? as usize)
     }
 
     /// Entry `i`.
@@ -445,14 +449,14 @@ impl ResourceTable {
         if !matches!(e.rsc_type, RscType::Carveout | RscType::Devmem) {
             return Err(Error::InvalidTable);
         }
-        self.need(e, 56)?;
+        self.need(e, CARVEOUT_SIZE)?;
         let r = |o: usize| self.io.read_u32(e.offset + o);
         Ok(Carveout {
-            da: r(4)?,
-            pa: r(8)?,
-            len: r(12)?,
-            flags: r(16)?,
-            name: self.read_name(e.offset + 24)?,
+            da: r(CARVEOUT_DA)?,
+            pa: r(CARVEOUT_PA)?,
+            len: r(CARVEOUT_LEN)?,
+            flags: r(CARVEOUT_FLAGS)?,
+            name: self.read_name(e.offset + CARVEOUT_NAME)?,
         })
     }
 
@@ -461,11 +465,11 @@ impl ResourceTable {
         if e.rsc_type != RscType::Trace {
             return Err(Error::InvalidTable);
         }
-        self.need(e, 48)?;
+        self.need(e, TRACE_SIZE)?;
         Ok(Trace {
-            da: self.io.read_u32(e.offset + 4)?,
-            len: self.io.read_u32(e.offset + 8)?,
-            name: self.read_name(e.offset + 16)?,
+            da: self.io.read_u32(e.offset + TRACE_DA)?,
+            len: self.io.read_u32(e.offset + TRACE_LEN)?,
+            name: self.read_name(e.offset + TRACE_NAME)?,
         })
     }
 
@@ -475,8 +479,8 @@ impl ResourceTable {
             return Err(Error::InvalidTable);
         }
         self.need(e, VDEV_HDR)?;
-        let num_vrings = self.io.read_u8(e.offset + 25)?;
-        let config_len = self.io.read_u32(e.offset + 20)?;
+        let num_vrings = self.io.read_u8(e.offset + VDEV_NUM_VRINGS)?;
+        let config_len = self.io.read_u32(e.offset + VDEV_CONFIG_LEN)?;
         let size = VDEV_HDR + VRING_SIZE * num_vrings as usize;
         self.need(
             e,
@@ -502,8 +506,37 @@ impl ResourceTable {
     }
 }
 
-const VDEV_HDR: usize = 28;
-const VRING_SIZE: usize = 20;
+// Field offsets for the parser, from the `#[repr(C)]` types above.
+const HDR_SIZE: usize = size_of::<RscTableHeader<0>>();
+const HDR_VER: usize = offset_of!(RscTableHeader<0>, ver);
+const HDR_NUM: usize = offset_of!(RscTableHeader<0>, num);
+const HDR_OFFSET: usize = offset_of!(RscTableHeader<0>, offset);
+/// Every entry starts with its `u32` type.
+const ENTRY_TYPE_SIZE: usize = size_of::<u32>();
+const CARVEOUT_SIZE: usize = size_of::<FwRscCarveout>();
+const CARVEOUT_DA: usize = offset_of!(FwRscCarveout, da);
+const CARVEOUT_PA: usize = offset_of!(FwRscCarveout, pa);
+const CARVEOUT_LEN: usize = offset_of!(FwRscCarveout, len);
+const CARVEOUT_FLAGS: usize = offset_of!(FwRscCarveout, flags);
+const CARVEOUT_NAME: usize = offset_of!(FwRscCarveout, name);
+const TRACE_SIZE: usize = size_of::<FwRscTrace>();
+const TRACE_DA: usize = offset_of!(FwRscTrace, da);
+const TRACE_LEN: usize = offset_of!(FwRscTrace, len);
+const TRACE_NAME: usize = offset_of!(FwRscTrace, name);
+/// A vdev entry without its vrings.
+const VDEV_HDR: usize = size_of::<FwRscVdev<0>>();
+const VDEV_ID: usize = offset_of!(FwRscVdev<0>, id);
+const VDEV_NOTIFYID: usize = offset_of!(FwRscVdev<0>, notifyid);
+const VDEV_DFEATURES: usize = offset_of!(FwRscVdev<0>, dfeatures);
+const VDEV_GFEATURES: usize = offset_of!(FwRscVdev<0>, gfeatures);
+const VDEV_CONFIG_LEN: usize = offset_of!(FwRscVdev<0>, config_len);
+const VDEV_STATUS: usize = offset_of!(FwRscVdev<0>, status);
+const VDEV_NUM_VRINGS: usize = offset_of!(FwRscVdev<0>, num_of_vrings);
+const VRING_SIZE: usize = size_of::<FwRscVdevVring>();
+const VRING_DA: usize = offset_of!(FwRscVdevVring, da);
+const VRING_ALIGN: usize = offset_of!(FwRscVdevVring, align);
+const VRING_NUM: usize = offset_of!(FwRscVdevVring, num);
+const VRING_NOTIFYID: usize = offset_of!(FwRscVdevVring, notifyid);
 
 /// A vring entry as read from a table.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -530,44 +563,46 @@ pub struct VdevRsc {
 impl VdevRsc {
     /// Virtio device id.
     pub fn id(&self) -> u32 {
-        self.io.read_u32(self.off + 4).unwrap_or(0)
+        self.io.read_u32(self.off + VDEV_ID).unwrap_or(0)
     }
 
     /// Notify id of the vdev.
     pub fn notifyid(&self) -> u32 {
-        self.io.read_u32(self.off + 8).unwrap_or(0)
+        self.io.read_u32(self.off + VDEV_NOTIFYID).unwrap_or(0)
     }
 
     /// Sets the vdev notify id (host).
     pub fn set_notifyid(&self, id: u32) -> Result<()> {
-        Ok(self.io.write_u32(self.off + 8, id)?)
+        Ok(self.io.write_u32(self.off + VDEV_NOTIFYID, id)?)
     }
 
     /// Features offered by the firmware.
     pub fn dfeatures(&self) -> u32 {
-        self.io.read_u32(self.off + 12).unwrap_or(0)
+        self.io.read_u32(self.off + VDEV_DFEATURES).unwrap_or(0)
     }
 
     /// Features accepted by the host.
     pub fn gfeatures(&self) -> u32 {
-        self.io.read_u32(self.off + 16).unwrap_or(0)
+        self.io.read_u32(self.off + VDEV_GFEATURES).unwrap_or(0)
     }
 
     /// Writes the accepted features (host).
     pub fn set_gfeatures(&self, f: u32) -> Result<()> {
-        Ok(self.io.write_u32(self.off + 16, f)?)
+        Ok(self.io.write_u32(self.off + VDEV_GFEATURES, f)?)
     }
 
     /// Virtio status.
     pub fn status(&self) -> u8 {
         self.io
-            .load_u8(self.off + 24, Ordering::Acquire)
+            .load_u8(self.off + VDEV_STATUS, Ordering::Acquire)
             .unwrap_or(0)
     }
 
     /// Writes the virtio status.
     pub fn set_status(&self, s: u8) -> Result<()> {
-        Ok(self.io.store_u8(self.off + 24, s, Ordering::Release)?)
+        Ok(self
+            .io
+            .store_u8(self.off + VDEV_STATUS, s, Ordering::Release)?)
     }
 
     /// Number of vrings.
@@ -586,21 +621,21 @@ impl VdevRsc {
     pub fn vring(&self, i: usize) -> Result<VringRsc> {
         let o = self.vring_off(i)?;
         Ok(VringRsc {
-            da: self.io.read_u32(o)?,
-            align: self.io.read_u32(o + 4)?,
-            num: self.io.read_u32(o + 8)?,
-            notifyid: self.io.read_u32(o + 12)?,
+            da: self.io.read_u32(o + VRING_DA)?,
+            align: self.io.read_u32(o + VRING_ALIGN)?,
+            num: self.io.read_u32(o + VRING_NUM)?,
+            notifyid: self.io.read_u32(o + VRING_NOTIFYID)?,
         })
     }
 
     /// Writes vring `i`'s device address (host, after allocating it).
     pub fn set_vring_da(&self, i: usize, da: u32) -> Result<()> {
-        Ok(self.io.write_u32(self.vring_off(i)?, da)?)
+        Ok(self.io.write_u32(self.vring_off(i)? + VRING_DA, da)?)
     }
 
     /// Writes vring `i`'s notify id (host).
     pub fn set_vring_notifyid(&self, i: usize, id: u32) -> Result<()> {
-        Ok(self.io.write_u32(self.vring_off(i)? + 12, id)?)
+        Ok(self.io.write_u32(self.vring_off(i)? + VRING_NOTIFYID, id)?)
     }
 
     /// Size of the config space.

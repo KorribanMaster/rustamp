@@ -87,7 +87,8 @@ fn main() {
         &out,
         "interop_glue",
         &manifest.join("c/glue.c"),
-        &[&inst.join("include"), &stub],
+        // rpmsg_internal.h, for the private wire structures.
+        &[&inst.join("include"), &stub, &oa_src.join("lib/rpmsg")],
     );
 
     println!("cargo:rustc-link-search=native={}", out.display());
