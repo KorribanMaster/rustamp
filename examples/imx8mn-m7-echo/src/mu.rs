@@ -16,7 +16,18 @@ use core::ptr::{read_volatile, write_volatile};
 pub const MU_B_BASE: usize = 0x30AB_0000;
 /// NVIC interrupt number of the MU on the M7 (`MU_M7_IRQn` in NXP's
 /// `MIMX8MN6_cm7.h`; check it against your SDK headers).
-pub const MU_IRQ: u16 = 97;
+pub const MU_IRQ: Irq = Irq(97);
+
+/// A device interrupt number, for `cortex_m::peripheral::NVIC`.
+#[derive(Clone, Copy)]
+pub struct Irq(pub u16);
+
+// SAFETY: `Irq` values are device interrupt numbers below the M7's 240.
+unsafe impl cortex_m::interrupt::InterruptNumber for Irq {
+    fn number(self) -> u16 {
+        self.0
+    }
+}
 
 const TR1: usize = 0x04;
 const RR1: usize = 0x14;

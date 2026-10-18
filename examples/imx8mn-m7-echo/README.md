@@ -4,9 +4,10 @@ Bare-metal firmware for the Cortex-M7 of an i.MX 8M Nano, started by Linux
 through `remoteproc` (`imx_rproc`). It announces `rpmsg-tty`, so mainline
 Linux creates `/dev/ttyRPMSG0`; everything written there is echoed back.
 
-The firmware has no dependencies beyond the openamp crates: `src/rt.rs` is a
-minimal Cortex-M7 runtime (vector table, reset, interrupt entry) and
-`link.x` the linker script. It builds and links to about 10 KB of code. It
+The firmware runs on `cortex-m-rt`, with `cortex-m` for the NVIC, MPU and
+`wfi`, and `panic-halt`. The memory layout is in `memory-tcm.x` (or
+`memory-qemu.x`), which `build.rs` hands to `cortex-m-rt`'s `link.x` as
+`memory.x`. It builds and links to about 10 KB of code. It
 has not been run on hardware yet. It does run under QEMU's `imx8mp-evk`
 (i.MX 8M Plus, same M7 memory map and MU): see [`qemu/`](qemu/README.md),
 where Linux 7.2 completes 2,000 echo round trips through `/dev/ttyRPMSG0`. Register addresses (MU1 B side `0x30AB0000`,
@@ -61,9 +62,10 @@ cat /dev/ttyRPMSG0 & echo hello > /dev/ttyRPMSG0   # prints "hello"
 
 | Piece | Where |
 |---|---|
-| Runtime | `src/rt.rs` (vectors, reset in asm, FPU on), `tcm.x` (ITCM code, DTCM data); `qemu-ddr.x` with `--features qemu-imx8mp` |
-| Resource table (vdev, 2 × 256-entry vrings at fixed addresses) | `resource_table!` in `src/main.rs`, its own section at `0x2001F000` (`tcm.x`) |
+| Runtime | `cortex-m-rt` (no `device` feature, so every interrupt reaches `DefaultHandler(irqn)`); `memory-tcm.x` (ITCM code, DTCM data), `memory-qemu.x` with `--features qemu-imx8mp` (DDR, sets VTOR). Panics halt (`panic-halt`); the QEMU build logs them on UART4 first |
+| Resource table (vdev, 2 × 256-entry vrings at fixed addresses) | `resource_table!` in `src/main.rs`, its own section at `0x2001F000` (`memory-tcm.x`) |
+| Locking | `CsLock` (feature `openamp-metal/critical-section`, implemented by `cortex-m`'s `critical-section-single-core`), so rpmsg stays correct even if called from an interrupt |
 | Virtio transport | `openamp_remoteproc::RprocVirtio::new_device` |
 | Kick Linux | MU channel 1 (`src/mu.rs`), value `notifyid << 16` |
-| Kicked by Linux | MU interrupt → `on_irq` sets a flag → main loop polls `try_recv`, sleeps in `wfi` |
+| Kicked by Linux | MU interrupt → `DefaultHandler` sets a flag → main loop polls `try_recv`, sleeps in `wfi` |
 | Caches | Off (reset state); MPU marks `0x55000000` uncached in case you enable them |

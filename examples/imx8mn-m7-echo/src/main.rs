@@ -20,16 +20,29 @@
 #![no_std]
 #![no_main]
 
+#[cfg(not(feature = "qemu-imx8mp"))]
+use panic_halt as _;
+
+/// In the QEMU build, report panics on UART4 before halting.
+#[cfg(feature = "qemu-imx8mp")]
+#[panic_handler]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    log!("openamp-rs m7: {}", info);
+    loop {
+        cortex_m::asm::wfi();
+    }
+}
+
 mod mu;
-mod rt;
 #[cfg(feature = "qemu-imx8mp")]
 #[macro_use]
 mod uart;
 
 use core::sync::atomic::{AtomicBool, Ordering};
 
+use cortex_m_rt::{entry, exception};
 use openamp_metal::IoRegion;
-use openamp_metal::sync::RawSpinLock;
+use openamp_metal::sync::CsLock;
 use openamp_remoteproc::rsc::{FwRscVdev, FwRscVdevVring, ResourceTable};
 use openamp_remoteproc::{RprocVirtio, resource_table};
 use openamp_rpmsg::{ADDR_ANY, Options, Received, RpmsgVirtio, VIRTIO_RPMSG_F_NS};
@@ -65,7 +78,7 @@ fn delay_us(us: u32) {
     // the host's mailbox TX never stalls.
     #[cfg(feature = "qemu-imx8mp")]
     while MU.try_recv().is_some() {}
-    rt::delay_cycles(us.saturating_mul(600));
+    cortex_m::asm::delay(us.saturating_mul(600));
 }
 
 /// Logs to UART4 in the QEMU build; compiled out otherwise.
@@ -78,8 +91,8 @@ macro_rules! log {
     }};
 }
 
-/// Called by the reset code once memory is initialised.
-pub(crate) extern "C" fn main() -> ! {
+#[entry]
+fn main() -> ! {
     #[cfg(feature = "qemu-imx8mp")]
     {
         uart::init();
@@ -87,10 +100,11 @@ pub(crate) extern "C" fn main() -> ! {
     }
     #[cfg(not(feature = "qemu-imx8mp"))]
     {
-        mpu_uncached_shared_memory();
+        let mut p = cortex_m::Peripherals::take().unwrap();
+        mpu_uncached_shared_memory(&mut p.MPU);
         MU.enable_rx_irq();
-        // SAFETY: the MU handler only touches an atomic flag.
-        unsafe { nvic_unmask(MU_IRQ) };
+        // SAFETY: the MU handler only touches the MU and an atomic flag.
+        unsafe { cortex_m::peripheral::NVIC::unmask(MU_IRQ) };
     }
 
     // SAFETY: the shared region is reserved for rpmsg in the device tree
@@ -106,7 +120,8 @@ pub(crate) extern "C" fn main() -> ! {
         ..Options::default()
     };
     // Blocks until Linux has probed virtio_rpmsg and set DRIVER_OK.
-    let rpmsg: RpmsgVirtio<_, RawSpinLock, 4> =
+    // CsLock keeps rpmsg correct even if it is called from an interrupt.
+    let rpmsg: RpmsgVirtio<_, CsLock, 4> =
         RpmsgVirtio::new_remote(transport, shm, opts).expect("rpmsg");
     log!("openamp-rs m7: DRIVER_OK, ns={}", rpmsg.support_ns());
     let ept = rpmsg
@@ -126,7 +141,7 @@ pub(crate) extern "C" fn main() -> ! {
                 if rpmsg.send_to(ept, m.src(), m.data()).is_ok() {
                     echoed += 1;
                     bytes += m.len() as u64;
-                    if echoed % 500 == 0 {
+                    if echoed.is_multiple_of(500) {
                         log!("openamp-rs m7: echoed {} messages, {} bytes", echoed, bytes);
                     }
                 }
@@ -134,62 +149,55 @@ pub(crate) extern "C" fn main() -> ! {
         }
         #[cfg(feature = "qemu-imx8mp")]
         while MU.try_recv().is_some() {}
-        // Sleep until the next kick; checking the flag with interrupts
-        // masked closes the race with the handler.
+        // Sleep until the next kick. Checking the flag with interrupts
+        // masked closes the race with the handler: a kick arriving after
+        // the check still ends the WFI, and is taken once `free` unmasks.
         #[cfg(not(feature = "qemu-imx8mp"))]
-        rt::sleep_unless(|| KICKED.swap(false, Ordering::AcqRel));
+        cortex_m::interrupt::free(|_| {
+            if !KICKED.swap(false, Ordering::AcqRel) {
+                cortex_m::asm::dsb();
+                cortex_m::asm::wfi();
+            }
+        });
     }
 }
 
-/// Device interrupt `irq` fired (called from the vector table).
-pub(crate) fn on_irq(irq: u16) {
-    if irq == MU_IRQ {
+/// Every device interrupt lands here (cortex-m-rt without a device crate).
+#[exception]
+unsafe fn DefaultHandler(irqn: i16) {
+    if irqn == MU_IRQ.0 as i16 {
         while MU.try_recv().is_some() {}
         KICKED.store(true, Ordering::Release);
     }
-}
-
-/// Unmasks NVIC interrupt `irq` (ISER registers).
-///
-/// # Safety
-///
-/// The interrupt's handler must be sound to run at any time.
-#[cfg_attr(feature = "qemu-imx8mp", allow(dead_code))]
-unsafe fn nvic_unmask(irq: u16) {
-    let iser = (0xE000_E100 + 4 * (irq as usize / 32)) as *mut u32;
-    // SAFETY: architecturally defined NVIC register; writes of 1 set only
-    // the given enable bit.
-    unsafe { iser.write_volatile(1 << (irq % 32)) };
 }
 
 /// Marks the 16 MiB around the rpmsg region (0x55000000..0x56000000) as
 /// normal, shareable, non-cacheable, execute-never in MPU region 0, and
 /// enables the MPU with the default map for everything else.
 #[cfg_attr(feature = "qemu-imx8mp", allow(dead_code))]
-fn mpu_uncached_shared_memory() {
-    const MPU_TYPE: *const u32 = 0xE000_ED90 as *const u32;
-    const MPU_CTRL: *mut u32 = 0xE000_ED94 as *mut u32;
-    const MPU_RNR: *mut u32 = 0xE000_ED98 as *mut u32;
-    const MPU_RBAR: *mut u32 = 0xE000_ED9C as *mut u32;
-    const MPU_RASR: *mut u32 = 0xE000_EDA0 as *mut u32;
+fn mpu_uncached_shared_memory(mpu: &mut cortex_m::peripheral::MPU) {
     const XN: u32 = 1 << 28;
     const AP_FULL: u32 = 0b011 << 24;
     const TEX_NORMAL_NC: u32 = 0b001 << 19; // TEX=001, C=0, B=0
     const SHAREABLE: u32 = 1 << 18;
     const SIZE_16M: u32 = (24 - 1) << 1; // 2^(SIZE+1) bytes
     const ENABLE: u32 = 1;
+    const PRIVDEFENA: u32 = 1 << 2;
 
-    // SAFETY: architecturally defined MPU registers; region 0 is not used
-    // by anything else in this firmware.
-    unsafe {
-        if MPU_TYPE.read_volatile() >> 8 & 0xff == 0 {
-            return; // no MPU
-        }
-        rt::barrier();
-        MPU_RNR.write_volatile(0);
-        MPU_RBAR.write_volatile(SHM_BASE & !0xff_ffff);
-        MPU_RASR.write_volatile(XN | AP_FULL | TEX_NORMAL_NC | SHAREABLE | SIZE_16M | ENABLE);
-        MPU_CTRL.write_volatile(1 << 2 | 1); // PRIVDEFENA | ENABLE
-        rt::barrier();
+    if mpu._type.read() >> 8 & 0xff == 0 {
+        return; // no MPU
     }
+    cortex_m::asm::dsb();
+    cortex_m::asm::isb();
+    // SAFETY: region 0 is not used by anything else in this firmware, and
+    // the default map stays in place for everything outside it.
+    unsafe {
+        mpu.rnr.write(0);
+        mpu.rbar.write(SHM_BASE & !0xff_ffff);
+        mpu.rasr
+            .write(XN | AP_FULL | TEX_NORMAL_NC | SHAREABLE | SIZE_16M | ENABLE);
+        mpu.ctrl.write(PRIVDEFENA | ENABLE);
+    }
+    cortex_m::asm::dsb();
+    cortex_m::asm::isb();
 }

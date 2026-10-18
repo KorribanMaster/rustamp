@@ -73,14 +73,30 @@ jobs:
         working-directory: examples/imx8mn-m7-echo
         env:
           RUSTFLAGS: -D warnings -C link-arg=-Tlink.x
-      - name: resource table is where Linux expects it
+      - name: vector table and resource table are where they belong
         run: |
           elf=examples/imx8mn-m7-echo/target/thumbv7em-none-eabihf/release/imx8mn-m7-echo
+          readelf -SW "$elf" | grep -E '\.vector_table +PROGBITS +00000000'
           readelf -SW "$elf" | grep -E '\.resource_table +PROGBITS +2001f000'
+          # The reset code zeroes .bss; the table Linux writes must be past it.
+          ebss=$(nm "$elf" | awk '$3 == "__ebss" { print $1 }')
+          test $((0x$ebss)) -le $((0x2001f000))
       - uses: actions/upload-artifact@v6
         with:
           name: imx8mn-m7-echo
           path: examples/imx8mn-m7-echo/target/thumbv7em-none-eabihf/release/imx8mn-m7-echo
+      - name: QEMU variant
+        run: cargo build --release --features qemu-imx8mp
+        working-directory: examples/imx8mn-m7-echo
+        env:
+          RUSTFLAGS: -D warnings -C link-arg=-Tlink.x
+      - name: QEMU variant layout (DDR)
+        run: |
+          elf=examples/imx8mn-m7-echo/target/thumbv7em-none-eabihf/release/imx8mn-m7-echo
+          readelf -SW "$elf" | grep -E '\.vector_table +PROGBITS +80000000'
+          readelf -SW "$elf" | grep -E '\.resource_table +PROGBITS +80f00000'
+          ebss=$(nm "$elf" | awk '$3 == "__ebss" { print $1 }')
+          test $((0x$ebss)) -le $((0x80f00000))
 
   example-cortex-a9:
     name: example-cortex-a9 (${{ matrix.board }})

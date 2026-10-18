@@ -116,7 +116,7 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 ```text
 crates/          the five library crates
 interop-tests/   Rust ↔ C tests; builds pinned C libmetal + open-amp with cmake
-examples/        imx8mn-m7-echo: Cortex-M7 firmware with its own minimal runtime
+examples/        imx8mn-m7-echo: Cortex-M7 firmware on cortex-m-rt
                  cortex-a9-rtu-echo: Cortex-A9 CPU1 firmware (Zynq-7000, Arria 10)
 linux/           a9-rproc: remoteproc driver for a spare Cortex-A9 core (GPL-2.0)
 .github/         CI: tests, lints, embedded cross-builds, interop; nightly QEMU runs

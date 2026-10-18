@@ -10,17 +10,24 @@ publish = false
 [workspace]
 
 [dependencies]
-openamp-metal = { path = "../../crates/metal", features = ["cortex-m7"] }
+openamp-metal = { path = "../../crates/metal", features = ["cortex-m7", "critical-section"] }
 openamp-virtio = { path = "../../crates/virtio", default-features = false }
 openamp-rpmsg = { path = "../../crates/rpmsg" }
 openamp-remoteproc = { path = "../../crates/remoteproc" }
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+# Without the `device` feature: all 240 interrupt vectors go to
+# `DefaultHandler(irqn)`, which dispatches the MU interrupt.
+cortex-m-rt = "0.7.5"
+panic-halt = "1.0"
 
 [features]
 # QEMU imx8mp-evk with the Cortex-M7 AMP series: the M7 shares the A53
 # physical map and boots from 0x80000000 (DDR), and the MU's B side has no
 # interrupt to the M7, so this variant links into DDR, polls the MU and logs
 # to UART4.
-qemu-imx8mp = []
+# Linked into DDR, so VTOR must point at our vector table (real silicon
+# resets with VTOR = 0).
+qemu-imx8mp = ["cortex-m-rt/set-vtor"]
 
 [[bin]]
 name = "imx8mn-m7-echo"

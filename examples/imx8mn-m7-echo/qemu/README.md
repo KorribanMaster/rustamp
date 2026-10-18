@@ -46,7 +46,7 @@ openamp-rs m7: echoed 2000 messages, 256712 bytes
 
 `--features qemu-imx8mp` changes three things:
 
-| | Hardware (`tcm.x`) | QEMU (`qemu-ddr.x`) |
+| | Hardware (`memory-tcm.x`) | QEMU (`memory-qemu.x`) |
 |---|---|---|
 | Code, data | ITCM `0x0`, DTCM `0x20000000` | DDR `0x80000000` (v2 has no TCM model, and the M7 boots from `0x80000000`) |
 | Resource table | `0x2001F000` | `0x80F00000` |
@@ -67,7 +67,7 @@ The rpmsg, virtio and remoteproc code is the same in both builds.
   of the series does the equivalent (`reg = offset >> 2`).
 * **v2 does not route MU1-B to the M7**, hence the polling. v4 adds an IRQ
   splitter and MU1-B IRQ 97, plus ITCM/DTCM regions, so the hardware build
-  (`tcm.x`, interrupt-driven) should run unchanged on v4.
+  (`memory-tcm.x`, interrupt-driven) should run unchanged on v4.
 * **Restarting the remote** (`stop` then `start`) is not modelled: v2 resumes
   the M7 without resetting it on the second `start`.
 * **NXP's `imx8mp-evk-rpmsg.dtb` from `qemu_test_bins` has a `rsc-table`
