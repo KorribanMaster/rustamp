@@ -20,6 +20,8 @@
 extern crate std;
 
 mod client;
+#[cfg(feature = "embedded-io")]
+mod file;
 #[cfg(feature = "rpmsg")]
 mod rpmsg;
 #[cfg(feature = "std")]
@@ -27,6 +29,8 @@ pub mod server;
 pub mod wire;
 
 pub use client::{Channel, Error, ProxyClient, Stdout};
+#[cfg(feature = "embedded-io")]
+pub use file::{FileError, ProxyFile};
 #[cfg(feature = "rpmsg")]
 pub use rpmsg::RpmsgChannel;
 

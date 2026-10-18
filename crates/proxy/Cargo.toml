@@ -17,6 +17,9 @@ default = ["rpmsg"]
 rpmsg = ["dep:openamp-rpmsg", "dep:openamp-virtio", "dep:openamp-metal"]
 # Host-side server executing requests against the host filesystem.
 std = []
+# `ProxyClient::open_file`, returning a `ProxyFile` that implements
+# `embedded_io::{Read, Write}`.
+embedded-io = ["dep:embedded-io"]
 # Diagnostics through the `log` or `defmt` facade. Without either, nothing is
 # logged.
 log = ["openamp-rpmsg?/log", "openamp-virtio?/log", "openamp-metal?/log"]
@@ -32,6 +35,7 @@ openamp-rpmsg = { workspace = true, optional = true }
 openamp-virtio = { workspace = true, optional = true }
 openamp-metal = { workspace = true, optional = true }
 defmt = { workspace = true, optional = true }
+embedded-io = { workspace = true, optional = true }
 
 [dev-dependencies]
 openamp-metal = { workspace = true, features = ["std"] }

@@ -28,6 +28,7 @@ openamp-rpmsg = { path = "crates/rpmsg", version = "0.1.0", default-features = f
 openamp-remoteproc = { path = "crates/remoteproc", version = "0.1.0", default-features = false }
 openamp-proxy = { path = "crates/proxy", version = "0.1.0", default-features = false }
 atomic-waker = { version = "1.1", default-features = false }
+embedded-io = { version = "0.7", default-features = false }
 libc = { version = "0.2", default-features = false }
 memmap2 = { version = "0.9", default-features = false }
 critical-section = { version = "1.2", default-features = false }

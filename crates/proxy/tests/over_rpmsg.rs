@@ -115,6 +115,36 @@ fn printf_and_files_through_the_proxy() {
     }
     assert_eq!(back, blob);
 
+    // The same through embedded-io.
+    #[cfg(feature = "embedded-io")]
+    {
+        use embedded_io::{Error as _, ErrorKind, Read, Write};
+        let mut f = client
+            .open_file("eio.bin", flags::O_RDWR | flags::O_CREAT, 0o600)
+            .unwrap();
+        f.write_all(&blob).unwrap();
+        f.flush().unwrap();
+        drop(f); // closes the fd
+        let mut f = client.open_file("eio.bin", flags::O_RDONLY, 0).unwrap();
+        let mut back = Vec::new();
+        loop {
+            let n = f.read(&mut buf).unwrap();
+            if n == 0 {
+                break;
+            }
+            back.extend_from_slice(&buf[..n]);
+        }
+        assert_eq!(back, blob);
+        f.close().unwrap();
+        let e = client
+            .open_file("missing.bin", flags::O_RDONLY, 0)
+            .unwrap_err();
+        assert_eq!(
+            openamp_proxy::FileError::from(e).kind(),
+            ErrorKind::NotFound
+        );
+    }
+
     remote.send(r_ep, b"stop").unwrap();
     server.join().unwrap();
     assert_eq!(&out.0.lock().unwrap()[..], b"tick 0\ntick 1\ntick 2\n");
