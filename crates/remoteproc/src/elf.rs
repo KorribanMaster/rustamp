@@ -255,7 +255,11 @@ pub fn find_section(img: &mut impl ImageStore, h: &Header, name: &[u8]) -> Resul
         if name_off as u64 + n as u64 > strtab.size {
             continue;
         }
-        img.read_at(strtab.offset + name_off as u64, &mut buf[..n])?;
+        let at = strtab
+            .offset
+            .checked_add(name_off as u64)
+            .ok_or(Error::InvalidImage)?;
+        img.read_at(at, &mut buf[..n])?;
         if &buf[..n - 1] == name && buf[n - 1] == 0 {
             return Ok(Some(s));
         }
@@ -286,11 +290,47 @@ pub fn load_segments(
         let mut done = 0;
         while done < filesz {
             let n = chunk.len().min(filesz - done);
-            img.read_at(s.offset + done as u64, &mut chunk[..n])?;
+            let at = s
+                .offset
+                .checked_add(done as u64)
+                .ok_or(Error::InvalidImage)?;
+            img.read_at(at, &mut chunk[..n])?;
             io.write_bytes(done, &chunk[..n])?;
             done += n;
         }
         io.fill(filesz, 0, memsz - filesz)?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// An ELF64 header and one section header, which is also the section
+    /// name string table.
+    fn elf64_with_strtab(strtab_offset: u64, name_off: u32) -> [u8; 128] {
+        let mut f = [0u8; 128];
+        f[..7].copy_from_slice(&[0x7f, b'E', b'L', b'F', 2, 1, 1]);
+        f[16..18].copy_from_slice(&2u16.to_le_bytes()); // ET_EXEC
+        f[40..48].copy_from_slice(&64u64.to_le_bytes()); // e_shoff
+        f[58..60].copy_from_slice(&64u16.to_le_bytes()); // e_shentsize
+        f[60..62].copy_from_slice(&1u16.to_le_bytes()); // e_shnum
+        f[64..68].copy_from_slice(&name_off.to_le_bytes()); // sh_name
+        f[88..96].copy_from_slice(&strtab_offset.to_le_bytes()); // sh_offset
+        f[96..104].copy_from_slice(&0x100u64.to_le_bytes()); // sh_size
+        f
+    }
+
+    #[test]
+    fn section_name_offset_overflow_is_an_error() {
+        // Found by fuzzing: the name's file offset overflowed u64.
+        let f = elf64_with_strtab(u64::MAX, 1);
+        let mut img = &f[..];
+        let h = header(&mut img).unwrap();
+        assert_eq!(
+            find_section(&mut img, &h, b".resource_table"),
+            Err(Error::InvalidImage)
+        );
+    }
 }
