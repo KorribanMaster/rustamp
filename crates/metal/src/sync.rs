@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-3-Clause
-//! Locking (`metal_mutex`, `metal_spinlock`) and a waker slot for async code.
+//! Locking (`metal_mutex`, `metal_spinlock`).
 //!
 //! [`Mutex`] is generic over a [`RawLock`], so a platform can supply the
 //! primitive that fits its execution model:
@@ -14,8 +14,9 @@
 
 use core::cell::UnsafeCell;
 use core::ops::{Deref, DerefMut};
-use core::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use core::task::Waker;
+#[cfg(feature = "critical-section")]
+use core::sync::atomic::AtomicUsize;
+use core::sync::atomic::{AtomicBool, Ordering};
 
 /// A raw mutual-exclusion primitive.
 ///
@@ -250,103 +251,10 @@ impl<R: RawLock, T: ?Sized> Drop for MutexGuard<'_, R, T> {
     }
 }
 
-const WAITING: usize = 0;
-const REGISTERING: usize = 0b01;
-const WAKING: usize = 0b10;
-
-/// A slot holding one [`Waker`], safe to wake from an interrupt handler.
-///
-/// The algorithm is the one used by `futures::task::AtomicWaker`: `register`
-/// and `wake` never block each other, and a wake that races with a register
-/// is not lost.
-pub struct AtomicWaker {
-    state: AtomicUsize,
-    waker: UnsafeCell<Option<Waker>>,
-}
-
-// SAFETY: access to `waker` is serialised by the state machine below.
-unsafe impl Send for AtomicWaker {}
-// SAFETY: as above.
-unsafe impl Sync for AtomicWaker {}
-
-impl AtomicWaker {
-    /// An empty slot.
-    pub const fn new() -> Self {
-        AtomicWaker {
-            state: AtomicUsize::new(WAITING),
-            waker: UnsafeCell::new(None),
-        }
-    }
-
-    /// Stores `waker`, to be woken by the next [`wake`](Self::wake).
-    pub fn register(&self, waker: &Waker) {
-        match self
-            .state
-            .compare_exchange(WAITING, REGISTERING, Ordering::Acquire, Ordering::Acquire)
-            .unwrap_or_else(|x| x)
-        {
-            WAITING => {
-                // SAFETY: the REGISTERING bit gives exclusive access.
-                unsafe {
-                    let slot = &mut *self.waker.get();
-                    match slot {
-                        Some(old) if old.will_wake(waker) => {}
-                        _ => *slot = Some(waker.clone()),
-                    }
-                }
-                let res = self.state.compare_exchange(
-                    REGISTERING,
-                    WAITING,
-                    Ordering::AcqRel,
-                    Ordering::Acquire,
-                );
-                if res.is_err() {
-                    // A wake arrived while registering: take and wake now.
-                    // SAFETY: still holding the REGISTERING bit.
-                    let w = unsafe { (*self.waker.get()).take() };
-                    self.state.swap(WAITING, Ordering::AcqRel);
-                    if let Some(w) = w {
-                        w.wake();
-                    }
-                }
-            }
-            WAKING => waker.wake_by_ref(),
-            _ => {} // Concurrent register: one of them wins; both are pending.
-        }
-    }
-
-    /// Wakes the stored waker, if any.
-    pub fn wake(&self) {
-        if let Some(w) = self.take() {
-            w.wake();
-        }
-    }
-
-    /// Takes the stored waker without waking it.
-    pub fn take(&self) -> Option<Waker> {
-        match self.state.fetch_or(WAKING, Ordering::AcqRel) {
-            WAITING => {
-                // SAFETY: the WAKING bit gives exclusive access.
-                let w = unsafe { (*self.waker.get()).take() };
-                self.state.fetch_and(!WAKING, Ordering::Release);
-                w
-            }
-            _ => None,
-        }
-    }
-}
-
-impl Default for AtomicWaker {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(all(test, feature = "std"))]
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use std::task::Wake;
 
     #[test]
     fn mutex_serialises_threads() {
@@ -410,25 +318,5 @@ mod tests {
             assert_eq!(*ga + *gb, 3);
         }
         assert!(a.try_lock().is_some());
-    }
-
-    struct Flag(std::sync::atomic::AtomicBool);
-    impl Wake for Flag {
-        fn wake(self: Arc<Self>) {
-            self.0.store(true, Ordering::SeqCst);
-        }
-    }
-
-    #[test]
-    fn atomic_waker_wakes_once() {
-        let flag = Arc::new(Flag(AtomicBool::new(false)));
-        let waker = Waker::from(flag.clone());
-        let slot = AtomicWaker::new();
-        slot.wake(); // nothing registered: no-op
-        slot.register(&waker);
-        assert!(!flag.0.load(Ordering::SeqCst));
-        slot.wake();
-        assert!(flag.0.load(Ordering::SeqCst));
-        assert!(slot.take().is_none());
     }
 }

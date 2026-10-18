@@ -12,9 +12,6 @@ open-amp, BSD-3-Clause:
 libmetal, BSD-3-Clause:
   Copyright (c) 2015, Xilinx Inc. and Contributors. All rights reserved.
 
-The AtomicWaker algorithm in crates/metal/src/sync.rs follows
-futures::task::AtomicWaker (MIT OR Apache-2.0, the futures-rs authors).
-
 interop-tests/ builds and links the unmodified C libraries for testing; they
 are fetched separately and are not distributed with this repository.
 

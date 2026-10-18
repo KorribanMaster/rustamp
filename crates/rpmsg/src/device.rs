@@ -224,9 +224,9 @@ pub struct RpmsgVirtio<T: Transport, L: RawLock = RawSpinLock, const E: usize = 
     opts: Options,
     state: Mutex<L, State<E>>,
     #[cfg(feature = "async")]
-    rx_waker: openamp_metal::sync::AtomicWaker,
+    rx_waker: atomic_waker::AtomicWaker,
     #[cfg(feature = "async")]
-    tx_waker: openamp_metal::sync::AtomicWaker,
+    tx_waker: atomic_waker::AtomicWaker,
 }
 
 impl<T: Transport, L: RawLock, const E: usize> fmt::Debug for RpmsgVirtio<T, L, E> {
@@ -382,9 +382,9 @@ impl<T: Transport, L: RawLock, const E: usize> RpmsgVirtio<T, L, E> {
                 reclaim: [const { None }; RECLAIM],
             }),
             #[cfg(feature = "async")]
-            rx_waker: openamp_metal::sync::AtomicWaker::new(),
+            rx_waker: atomic_waker::AtomicWaker::new(),
             #[cfg(feature = "async")]
-            tx_waker: openamp_metal::sync::AtomicWaker::new(),
+            tx_waker: atomic_waker::AtomicWaker::new(),
         }
     }
 

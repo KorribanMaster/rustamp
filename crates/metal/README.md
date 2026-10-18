@@ -8,7 +8,7 @@ Hardware and OS abstraction for [openamp-rs](../../README.md), a port of
 * `cache`: `Cache` trait; Cortex-M7 (`cortex-m7`), ARMv7-A (`armv7a`) and
   AArch64 implementations.
 * `sync`: `Mutex` over a pluggable `RawLock` (spin lock, or `CsLock` with the
-  `critical-section` feature), interrupt-safe `AtomicWaker`.
+  `critical-section` feature).
 * `notify`, `time`, `irq`: platform hooks (`Notifier`, `Delay`,
   `IrqController`, `IrqTable`).
 * `shmem::ShmemPool`: bump allocator for message buffers and vrings.
