@@ -18,36 +18,9 @@ use std::path::{Path, PathBuf};
 use std::string::{String, ToString};
 use std::vec::Vec;
 
+use memmap2::{MmapOptions, MmapRaw};
+
 use crate::{Error, IoRegion, Result};
-
-/// The handful of libc symbols this backend needs (std already links libc).
-mod sys {
-    use core::ffi::{c_int, c_long, c_void};
-
-    pub(super) const PROT_READ: c_int = 1;
-    pub(super) const PROT_WRITE: c_int = 2;
-    pub(super) const MAP_SHARED: c_int = 1;
-    pub(super) const MAP_FAILED: *mut c_void = !0usize as *mut c_void;
-    pub(super) const SC_PAGESIZE: c_int = 30;
-    pub(super) const ENOENT: i32 = 2;
-
-    unsafe extern "C" {
-        pub(super) fn mmap(
-            addr: *mut c_void,
-            len: usize,
-            prot: c_int,
-            flags: c_int,
-            fd: c_int,
-            off: i64,
-        ) -> *mut c_void;
-        pub(super) fn munmap(addr: *mut c_void, len: usize) -> c_int;
-        pub(super) fn sysconf(name: c_int) -> c_long;
-    }
-}
-
-fn last_os_error() -> Error {
-    Error::Os(std::io::Error::last_os_error().raw_os_error().unwrap_or(0))
-}
 
 fn io_err(e: std::io::Error) -> Error {
     Error::Os(e.raw_os_error().unwrap_or(0))
@@ -55,48 +28,26 @@ fn io_err(e: std::io::Error) -> Error {
 
 fn page_size() -> usize {
     // SAFETY: sysconf has no preconditions.
-    let p = unsafe { sys::sysconf(sys::SC_PAGESIZE) };
+    let p = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
     if p > 0 { p as usize } else { 4096 }
 }
 
 /// An `mmap`ed range, unmapped on drop.
 #[derive(Debug)]
 pub struct Mapping {
-    base: *mut u8,
-    map_len: usize,
+    map: MmapRaw,
     start: usize,
     len: usize,
 }
 
-// SAFETY: the mapping is plain shared memory; access goes through IoRegion.
-unsafe impl Send for Mapping {}
-// SAFETY: as above.
-unsafe impl Sync for Mapping {}
-
 impl Mapping {
-    fn new(fd: RawFd, len: usize, file_offset: i64, start: usize) -> Result<Self> {
-        let map_len = crate::align_up(start + len, page_size());
-        // SAFETY: a fresh shared mapping of a file descriptor we own; the
-        // kernel validates the arguments.
-        let p = unsafe {
-            sys::mmap(
-                core::ptr::null_mut(),
-                map_len,
-                sys::PROT_READ | sys::PROT_WRITE,
-                sys::MAP_SHARED,
-                fd,
-                file_offset,
-            )
-        };
-        if p == sys::MAP_FAILED {
-            return Err(last_os_error());
-        }
-        Ok(Mapping {
-            base: p.cast(),
-            map_len,
-            start,
-            len,
-        })
+    fn new(file: &File, len: usize, file_offset: u64, start: usize) -> Result<Self> {
+        let map = MmapOptions::new()
+            .offset(file_offset)
+            .len(start + len)
+            .map_raw(file)
+            .map_err(io_err)?;
+        Ok(Mapping { map, start, len })
     }
 
     /// Length of the usable part of the mapping.
@@ -117,9 +68,9 @@ impl Mapping {
     /// dropped. Use [`leak`](Self::leak) when the mapping lives for the whole
     /// program.
     pub unsafe fn region(&self, phys: u64) -> IoRegion {
-        // SAFETY: the mapping is valid for `len` bytes from `start`; the
-        // lifetime obligation is passed to the caller.
-        unsafe { IoRegion::new(self.base.add(self.start), phys, self.len) }
+        // SAFETY: the mapping is valid for `start + len` bytes; the lifetime
+        // obligation is passed to the caller.
+        unsafe { IoRegion::new(self.map.as_mut_ptr().add(self.start), phys, self.len) }
     }
 
     /// Keeps the mapping forever and returns a region over it.
@@ -128,13 +79,6 @@ impl Mapping {
         let r = unsafe { self.region(phys) };
         core::mem::forget(self);
         r
-    }
-}
-
-impl Drop for Mapping {
-    fn drop(&mut self) {
-        // SAFETY: unmapping exactly what `mmap` returned.
-        unsafe { sys::munmap(self.base.cast(), self.map_len) };
     }
 }
 
@@ -152,7 +96,7 @@ pub fn map_shared_file(path: impl AsRef<Path>, size: usize) -> Result<Mapping> {
     if cur < size as u64 {
         f.set_len(size as u64).map_err(io_err)?;
     }
-    Mapping::new(f.as_raw_fd(), size, 0, 0)
+    Mapping::new(&f, size, 0, 0)
 }
 
 /// One memory map of a UIO device, from `/sys/class/uio/uioN/maps/mapM`.
@@ -204,7 +148,7 @@ impl UioDevice {
                 return Self::open(Path::new("/dev").join(e.file_name()));
             }
         }
-        Err(Error::Os(sys::ENOENT))
+        Err(Error::Os(libc::ENOENT))
     }
 
     fn open_with_sysfs(dev: &Path, sysfs: &Path) -> Result<Self> {
@@ -246,8 +190,8 @@ impl UioDevice {
     pub fn map(&self, index: usize) -> Result<(Mapping, UioMap)> {
         let m = *self.maps.get(index).ok_or(Error::InvalidParam)?;
         // UIO selects map N with an mmap offset of N pages.
-        let off = (index * page_size()) as i64;
-        let mapping = Mapping::new(self.file.as_raw_fd(), m.size, off, m.offset)?;
+        let off = (index * page_size()) as u64;
+        let mapping = Mapping::new(&self.file, m.size, off, m.offset)?;
         Ok((mapping, m))
     }
 

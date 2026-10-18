@@ -18,7 +18,7 @@ alloc = []
 # std helpers (thread-sleeping delay, std error impls).
 std = ["alloc"]
 # Linux userspace backend: UIO devices and shared-memory files via mmap.
-linux = ["std"]
+linux = ["std", "dep:memmap2", "dep:libc"]
 # Cache maintenance for the core this crate is compiled for.
 cortex-m7 = []
 armv7a = []
@@ -34,6 +34,8 @@ defmt = ["dep:defmt"]
 [dependencies]
 critical-section = { workspace = true, optional = true }
 defmt = { workspace = true, optional = true }
+libc = { workspace = true, optional = true }
+memmap2 = { workspace = true, optional = true }
 
 [dev-dependencies]
 critical-section = { workspace = true, features = ["std"] }
