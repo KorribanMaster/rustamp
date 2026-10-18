@@ -106,7 +106,7 @@ impl<R: RawLock, T: ?Sized> Mutex<R, T> {
 
     /// Locks the mutex if it is free.
     pub fn try_lock(&self) -> Option<MutexGuard<'_, R, T>> {
-        self.raw.try_lock().then_some(MutexGuard { mutex: self })
+        self.raw.try_lock().then(|| MutexGuard { mutex: self })
     }
 
     /// Mutable access without locking (exclusive borrow proves no sharing).
@@ -265,6 +265,15 @@ mod tests {
         }
         assert_eq!(*m.lock(), 40_000);
         assert!(m.try_lock().is_some());
+    }
+
+    #[test]
+    fn failed_try_lock_keeps_lock_held() {
+        let m: SpinMutex<u8> = Mutex::new(0);
+        let _g = m.lock();
+        assert!(m.try_lock().is_none());
+        // A failed try_lock must not have released the holder's lock.
+        assert!(m.try_lock().is_none());
     }
 
     struct Flag(std::sync::atomic::AtomicBool);
