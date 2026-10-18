@@ -114,3 +114,99 @@ impl<T: Transport + ?Sized> Transport for &T {
         (**self).notify(index)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ring::VringLayout;
+    use core::cell::Cell;
+    use openamp_metal::IoRegion;
+
+    /// A transport implementing only the required methods.
+    struct Minimal {
+        status: Cell<u8>,
+        driver: Cell<u64>,
+        notified: Cell<Option<usize>>,
+    }
+
+    impl Transport for Minimal {
+        fn role(&self) -> Role {
+            Role::Driver
+        }
+        fn device_id(&self) -> u32 {
+            7
+        }
+        fn status(&self) -> u8 {
+            self.status.get()
+        }
+        fn set_status(&self, status: u8) {
+            self.status.set(status)
+        }
+        fn device_features(&self) -> u64 {
+            0b1011
+        }
+        fn driver_features(&self) -> u64 {
+            self.driver.get()
+        }
+        fn set_driver_features(&self, features: u64) -> Result<()> {
+            self.driver.set(features);
+            Ok(())
+        }
+        fn read_config(&self, offset: usize, buf: &mut [u8]) -> Result<()> {
+            buf.fill(offset as u8);
+            Ok(())
+        }
+        fn write_config(&self, _: usize, _: &[u8]) -> Result<()> {
+            Err(crate::Error::Unsupported)
+        }
+        fn queue_count(&self) -> usize {
+            1
+        }
+        fn queue(&self, index: usize) -> Result<QueueConfig> {
+            if index != 0 {
+                return Err(crate::Error::NoSuchQueue);
+            }
+            Ok(QueueConfig {
+                io: IoRegion::alloc(0x1000, 0),
+                offset: 0,
+                layout: VringLayout::new(4, 16)?,
+                notify_id: 0,
+            })
+        }
+        fn notify(&self, index: usize) {
+            self.notified.set(Some(index))
+        }
+    }
+
+    /// The provided methods, and every method through `&T`.
+    #[test]
+    fn defaults_and_forwarding() {
+        let t = Minimal {
+            status: Cell::new(0),
+            driver: Cell::new(0),
+            notified: Cell::new(None),
+        };
+        let r: &dyn Transport = &t;
+        let rr = &r;
+        assert_eq!(rr.role(), Role::Driver);
+        assert_eq!(rr.device_id(), 7);
+        rr.set_status(3);
+        assert_eq!(rr.status(), 3);
+        assert_eq!(rr.device_features(), 0b1011);
+        rr.set_driver_features(0b0110).unwrap();
+        assert_eq!(rr.driver_features(), 0b0110);
+        // Default: offered & accepted.
+        assert_eq!(rr.features(), 0b0010);
+        let mut b = [0u8; 2];
+        rr.read_config(9, &mut b).unwrap();
+        assert_eq!(b, [9, 9]);
+        assert_eq!(rr.write_config(0, &b), Err(crate::Error::Unsupported));
+        assert_eq!(rr.queue_count(), 1);
+        let q = rr.queue(0).unwrap();
+        assert_eq!(rr.queue(1).unwrap_err(), crate::Error::NoSuchQueue);
+        // Default: the device chooses ring memory.
+        assert_eq!(rr.setup_queue(0, &q), Err(crate::Error::Unsupported));
+        rr.notify(0);
+        assert_eq!(t.notified.get(), Some(0));
+    }
+}

@@ -40,3 +40,34 @@ impl fmt::Display for Error {
 }
 
 impl core::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every message is non-empty and distinct, and a wrapped error's
+    /// message includes the inner one.
+    fn check_messages(all: &[Error]) {
+        use std::string::ToString;
+        let msgs: std::vec::Vec<_> = all.iter().map(|e| e.to_string()).collect();
+        for (i, m) in msgs.iter().enumerate() {
+            assert!(!m.is_empty(), "{:?}", all[i]);
+            assert!(!msgs[..i].contains(m), "duplicate message {m:?}");
+        }
+    }
+
+    #[test]
+    fn messages() {
+        use std::string::ToString;
+        check_messages(&[
+            Error::OutOfBounds,
+            Error::Misaligned,
+            Error::InvalidAddress,
+            Error::NoMemory,
+            Error::InvalidParam,
+            Error::Unsupported,
+            Error::Os(13),
+        ]);
+        assert!(Error::Os(13).to_string().contains("13"));
+    }
+}

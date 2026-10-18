@@ -61,3 +61,34 @@ impl Clock for std::time::Instant {
         self.elapsed().as_micros() as u64
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::cell::Cell;
+
+    #[test]
+    fn delays_and_clock() {
+        // Closures are delays.
+        let total = Cell::new(0);
+        let d = |us: u32| total.set(total.get() + us);
+        d.delay_us(3);
+        Delay::delay_us(&d, 4);
+        assert_eq!(total.get(), 7);
+
+        SpinDelay::default().delay_us(10);
+        // Zero iterations either way; must neither overflow nor hang.
+        SpinDelay {
+            spins_per_us: u32::MAX,
+        }
+        .delay_us(0);
+        SpinDelay { spins_per_us: 0 }.delay_us(u32::MAX);
+
+        #[cfg(feature = "std")]
+        {
+            let start = std::time::Instant::now();
+            StdDelay.delay_us(1000);
+            assert!(start.now_us() >= 1000);
+        }
+    }
+}

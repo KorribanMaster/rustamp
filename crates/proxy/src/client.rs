@@ -214,6 +214,25 @@ mod tests {
         }
     }
 
+    #[test]
+    fn error_messages() {
+        use std::string::ToString;
+        let all: [Error<&str>; 5] = [
+            Error::Channel("link down"),
+            Error::TooLong,
+            Error::Protocol,
+            Error::Remote(-2),
+            Error::Terminated,
+        ];
+        let msgs: Vec<_> = all.iter().map(|e| e.to_string()).collect();
+        for (i, m) in msgs.iter().enumerate() {
+            assert!(!m.is_empty());
+            assert!(!msgs[..i].contains(m), "duplicate message {m:?}");
+        }
+        assert!(msgs[0].contains("link down"));
+        assert!(msgs[3].contains("-2"));
+    }
+
     fn reply(id: u32, ret: i32, data: &[u8]) -> Vec<u8> {
         let mut v = Syscall {
             id,

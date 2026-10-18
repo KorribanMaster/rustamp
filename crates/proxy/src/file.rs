@@ -127,3 +127,22 @@ impl<C: Channel<Error: fmt::Debug>> embedded_io::Write for ProxyFile<'_, C> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use embedded_io::{Error as _, ErrorKind};
+    use std::string::ToString;
+
+    #[test]
+    fn error_kinds_and_messages() {
+        let kind = |e: FileError<()>| e.kind();
+        assert_eq!(kind(Error::Remote(-2).into()), ErrorKind::NotFound);
+        assert_eq!(kind(Error::Remote(-13).into()), ErrorKind::Other);
+        assert_eq!(kind(Error::Protocol.into()), ErrorKind::Other);
+        assert_eq!(kind(FileError::WriteZero), ErrorKind::WriteZero);
+        let proxy: FileError<()> = Error::Terminated.into();
+        assert_eq!(proxy.to_string(), Error::<()>::Terminated.to_string());
+        assert!(!FileError::<()>::WriteZero.to_string().is_empty());
+    }
+}

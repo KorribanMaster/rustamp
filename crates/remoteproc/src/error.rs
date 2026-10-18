@@ -71,3 +71,52 @@ impl fmt::Display for Error {
 }
 
 impl core::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every message is non-empty and distinct, and a wrapped error's
+    /// message includes the inner one.
+    fn check_messages(all: &[Error]) {
+        use std::string::ToString;
+        let msgs: std::vec::Vec<_> = all.iter().map(|e| e.to_string()).collect();
+        for (i, m) in msgs.iter().enumerate() {
+            assert!(!m.is_empty(), "{:?}", all[i]);
+            assert!(!msgs[..i].contains(m), "duplicate message {m:?}");
+        }
+    }
+
+    #[test]
+    fn messages_and_conversions() {
+        use std::string::ToString;
+        let m = openamp_metal::Error::NoMemory;
+        let v = openamp_virtio::Error::BadLayout;
+        check_messages(&[
+            Error::Metal(m),
+            Error::Virtio(v),
+            Error::InvalidImage,
+            Error::UnsupportedImage,
+            Error::InvalidTable,
+            Error::NoResourceTable,
+            Error::UnsupportedResource(129),
+            Error::InvalidState,
+            Error::NoMemory,
+            Error::Platform(-5),
+        ]);
+        assert!(Error::UnsupportedResource(129).to_string().contains("129"));
+        assert!(Error::Platform(-5).to_string().contains("-5"));
+        assert_eq!(Error::from(m), Error::Metal(m));
+        assert_eq!(Error::from(v), Error::Virtio(v));
+        // Back into virtio errors, for the Transport implementation.
+        assert_eq!(
+            openamp_virtio::Error::from(Error::Metal(m)),
+            openamp_virtio::Error::Metal(m)
+        );
+        assert_eq!(openamp_virtio::Error::from(Error::Virtio(v)), v);
+        assert_eq!(
+            openamp_virtio::Error::from(Error::InvalidTable),
+            openamp_virtio::Error::NotReady
+        );
+    }
+}

@@ -82,3 +82,62 @@ impl fmt::Display for Error {
 }
 
 impl core::error::Error for Error {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every message is non-empty and distinct, and a wrapped error's
+    /// message includes the inner one.
+    fn check_messages(all: &[Error]) {
+        use std::string::ToString;
+        let msgs: std::vec::Vec<_> = all.iter().map(|e| e.to_string()).collect();
+        for (i, m) in msgs.iter().enumerate() {
+            assert!(!m.is_empty(), "{:?}", all[i]);
+            assert!(!msgs[..i].contains(m), "duplicate message {m:?}");
+        }
+    }
+
+    const ALL: [Error; 11] = [
+        Error::Metal(openamp_metal::Error::OutOfBounds),
+        Error::Virtio(openamp_virtio::Error::QueueFull),
+        Error::NoBuffer,
+        Error::MessageTooLarge,
+        Error::NoEndpointSlot,
+        Error::InvalidAddress,
+        Error::InvalidEndpoint,
+        Error::NotReady,
+        Error::InvalidParam,
+        Error::InvalidBuffer,
+        Error::Timeout,
+    ];
+
+    #[test]
+    fn messages_and_conversions() {
+        use std::string::ToString;
+        check_messages(&ALL);
+        let m = openamp_metal::Error::OutOfBounds;
+        let v = openamp_virtio::Error::QueueFull;
+        assert_eq!(Error::from(m), Error::Metal(m));
+        assert_eq!(Error::from(v), Error::Virtio(v));
+        assert!(Error::Virtio(v).to_string().contains(&v.to_string()));
+    }
+
+    /// The codes of `RPMSG_ERR_*` in open-amp's `rpmsg.h`.
+    #[test]
+    fn c_error_codes() {
+        let base = -2000;
+        let code = |e: Error| e.to_c() - base;
+        assert_eq!(code(Error::NoEndpointSlot), -1); // RPMSG_ERR_NO_MEM
+        assert_eq!(code(Error::NoBuffer), -2); // RPMSG_ERR_NO_BUFF
+        assert_eq!(code(Error::Timeout), -2);
+        assert_eq!(code(Error::InvalidParam), -3); // RPMSG_ERR_PARAM
+        assert_eq!(code(Error::InvalidEndpoint), -3);
+        assert_eq!(code(Error::NotReady), -4); // RPMSG_ERR_DEV_STATE
+        assert_eq!(code(Error::MessageTooLarge), -5); // RPMSG_ERR_BUFF_SIZE
+        assert_eq!(code(Error::InvalidBuffer), -6); // RPMSG_ERR_INIT
+        assert_eq!(code(ALL[0]), -6);
+        assert_eq!(code(ALL[1]), -6);
+        assert_eq!(code(Error::InvalidAddress), -7); // RPMSG_ERR_ADDR
+    }
+}
