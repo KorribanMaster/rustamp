@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * ZCU102 with R5_0 (split mode) running the RustAmp rpmsg echo firmware.
+ *
+ * Mainline zynqmp-zcu102-rev1.0.dts already enables the R5 cluster in split
+ * mode and reserves rproc_0_fw_image at 0x3ed00000. This adds what rpmsg
+ * needs, following upstream OpenAMP's zynqmp-openamp.dtso
+ * (openamp-system-reference, examples/linux/dts/xilinx): the vring and
+ * buffer carve-outs, the IPI mailbox to R5_0, and both on r5f@0.
+ *
+ * Build it in a Linux tree: copy to arch/arm64/boot/dts/xilinx/ and
+ * `make xilinx/zynqmp-zcu102-rustamp.dtb` (add it to that Makefile, or
+ * build it with dtc after the C preprocessor).
+ */
+#include "zynqmp-zcu102-rev1.0.dts"
+
+/ {
+	model = "ZynqMP ZCU102 Rev1.0 + RustAmp on R5_0";
+
+	reserved-memory {
+		rpu0vdev0vring0: vdev0vring0@3ed40000 {
+			no-map;
+			reg = <0x0 0x3ed40000 0x0 0x4000>;
+		};
+
+		rpu0vdev0vring1: vdev0vring1@3ed44000 {
+			no-map;
+			reg = <0x0 0x3ed44000 0x0 0x4000>;
+		};
+
+		rpu0vdev0buffer: vdev0buffer@3ed48000 {
+			no-map;
+			compatible = "shared-dma-pool";
+			reg = <0x0 0x3ed48000 0x0 0x100000>;
+		};
+	};
+};
+
+/* The APU is IPI channel 0 (zynqmp.dtsi); R5_0 is channel 1. */
+&zynqmp_ipi {
+	ipi_mailbox_rpu0: mailbox@ff990040 {
+		compatible = "xlnx,zynqmp-ipi-dest-mailbox";
+		reg = <0x0 0xff990040 0x0 0x20>,
+		      <0x0 0xff990060 0x0 0x20>,
+		      <0x0 0xff990200 0x0 0x20>,
+		      <0x0 0xff990220 0x0 0x20>;
+		reg-names = "local_request_region",
+			    "local_response_region",
+			    "remote_request_region",
+			    "remote_response_region";
+		#mbox-cells = <1>;
+		xlnx,ipi-id = <1>;
+	};
+};
+
+&rproc_split {
+	r5f@0 {
+		memory-region = <&rproc_0_fw_image>, <&rpu0vdev0vring0>,
+				<&rpu0vdev0vring1>, <&rpu0vdev0buffer>;
+		mboxes = <&ipi_mailbox_rpu0 0>, <&ipi_mailbox_rpu0 1>;
+		mbox-names = "tx", "rx";
+	};
+};

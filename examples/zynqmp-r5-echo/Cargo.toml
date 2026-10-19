@@ -1,0 +1,45 @@
+[package]
+name = "zynqmp-r5-echo"
+description = "rpmsg echo firmware for the Cortex-R5F of a Zynq UltraScale+ MPSoC, driven by Linux xlnx_r5_remoteproc"
+version = "0.1.0"
+edition = "2024"
+license = "BSD-3-Clause"
+publish = false
+
+# Standalone: builds for armv7r-none-eabihf, outside the host workspace.
+[workspace]
+
+[dependencies]
+rustamp-metal = { path = "../../crates/metal", features = ["critical-section"] }
+rustamp-virtio = { path = "../../crates/virtio", default-features = false }
+rustamp-rpmsg = { path = "../../crates/rpmsg" }
+rustamp-remoteproc = { path = "../../crates/remoteproc" }
+aarch32-rt = "0.5"
+aarch32-cpu = { version = "0.4", features = ["critical-section-single-core"] }
+
+[features]
+default = ["zcu102"]
+# ZCU102: R5 debug output on UART1 (Linux has UART0).
+zcu102 = []
+# AMD/Xilinx QEMU's ZCU102 model: it has no RPU GIC (the node is disabled in
+# its hardware device tree), so poll IPI channel 1 instead of taking its
+# interrupt. Everything else is the same as on hardware.
+qemu = []
+
+[lib]
+test = true
+
+[[bin]]
+name = "zynqmp-r5-echo"
+test = false
+bench = false
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+debug = true
+codegen-units = 1

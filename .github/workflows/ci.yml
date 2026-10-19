@@ -169,6 +169,46 @@ jobs:
           name: cortex-a9-rtu-echo-${{ matrix.board }}
           path: examples/cortex-a9-rtu-echo/target/armv7a-none-eabi/release/cortex-a9-rtu-echo-${{ matrix.board }}
 
+  example-zynqmp:
+    name: example-zynqmp (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - variant: zcu102
+            flags: ""
+          - variant: qemu
+            flags: --features qemu
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7r-none-eabihf
+          components: clippy
+      - name: host tests (memory map, IPI and GIC encodings)
+        run: cargo test --lib --target x86_64-unknown-linux-gnu
+        working-directory: examples/zynqmp-r5-echo
+      - run: cargo clippy --release ${{ matrix.flags }} -- -D warnings
+        working-directory: examples/zynqmp-r5-echo
+      - run: cargo build --release ${{ matrix.flags }}
+        working-directory: examples/zynqmp-r5-echo
+        env:
+          RUSTFLAGS: -D warnings -C link-arg=-Tlink.x
+      - name: vectors, resource table and trace buffer are where Linux expects them
+        run: |
+          elf=examples/zynqmp-r5-echo/target/armv7r-none-eabihf/release/zynqmp-r5-echo
+          readelf -SW "$elf" | grep -E '\.vector_table +PROGBITS +00000000'
+          readelf -SW "$elf" | grep -E '\.resource_table +PROGBITS +3ed00000'
+          readelf -SW "$elf" | grep -E '\.rsc_trace +NOBITS +3ed01000'
+          # The reset code zeroes .bss; the stacks and .bss stay in BTCM.
+          ebss=$(nm "$elf" | awk '$3 == "__ebss" { print $1 }')
+          test $((0x$ebss)) -le $((0x30000))
+          mv "$elf" "$elf-${{ matrix.variant }}"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: zynqmp-r5-echo-${{ matrix.variant }}
+          path: examples/zynqmp-r5-echo/target/armv7r-none-eabihf/release/zynqmp-r5-echo-${{ matrix.variant }}
+
   interop:
     name: interop with C open-amp
     runs-on: ubuntu-latest

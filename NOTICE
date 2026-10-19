@@ -23,3 +23,11 @@ Linux's (GPL-2.0).
 examples/cortex-a9-rtu-echo/src/rt.rs is adapted from openamp-echo, the
 author's own Rust port of the Zynq-7000 RTU firmware, whose startup followed
 the Xilinx standalone BSP (MIT).
+
+examples/zynqmp-r5-echo follows the zynqmp_r5 platform of
+openamp-system-reference (https://github.com/OpenAMP/openamp-system-reference,
+BSD-3-Clause): its resource table, memory map, IPI channel and Linux device
+tree (examples/legacy_apps/machine/xlnx/zynqmp_r5,
+examples/linux/dts/xilinx/zynqmp-openamp.dtso).
+  Copyright (c) 2014, Mentor Graphics Corporation
+  Copyright (c) 2015, 2017 Xilinx, Inc. All rights reserved.
