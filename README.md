@@ -59,6 +59,11 @@ A complete example for the i.MX 8M Nano/Plus Cortex-M7 driven by Linux
 runs under QEMU (`imx8mp-evk` with the Cortex-M7 AMP series) via
 [`qemu/reproduce.sh`](examples/imx8mn-m7-echo/qemu/reproduce.sh).
 
+For the Cortex-R5F of a Zynq UltraScale+ MPSoC with Linux on the A53s
+(mainline `xlnx_r5_remoteproc`, after upstream OpenAMP's `zynqmp_r5`
+platform), see [`examples/zynqmp-r5-echo`](examples/zynqmp-r5-echo); it runs
+on AMD/Xilinx QEMU's ZCU102 with the PMU firmware.
+
 For a Cortex-A9 MPCore with Linux on CPU0 and the firmware on CPU1
 (Zynq-7000, Arria 10), see [`examples/cortex-a9-rtu-echo`](examples/cortex-a9-rtu-echo)
 and its Linux driver [`linux/a9-rproc`](linux/a9-rproc); it runs on
@@ -79,8 +84,9 @@ Version 0.1, built against open-amp and libmetal 1.10 (main, October 2026).
 | Compiles for `thumbv7em-none-eabihf`, `armv7a-none-eabi`, `aarch64-unknown-none` | Yes, including the cache-maintenance asm |
 | Linux 7.2 `imx_rproc` + `rpmsg_tty` ↔ our firmware on QEMU `imx8mp-evk` with the Cortex-M7 AMP series ([details](examples/imx8mn-m7-echo/qemu/README.md)) | 2,000 checked round trips through `/dev/ttyRPMSG0` |
 | Linux 7.2 `a9-rproc` + `rpmsg_tty` ↔ our firmware on CPU1 of QEMU `xilinx-zynq-a9` ([details](examples/cortex-a9-rtu-echo/qemu/README.md)) | 6,000 checked round trips, including two stop/start reloads |
+| Linux 7.2 `xlnx_r5_remoteproc` + `rpmsg_tty` ↔ our firmware on R5_0 of AMD/Xilinx QEMU's ZCU102 with the PMU firmware ([details](examples/zynqmp-r5-echo/qemu/README.md)) | 6,000 checked round trips, including two stop/start reloads |
 | Cortex-A9 firmware and driver for Arria 10 | Build and device tree compile only |
-| Linux kernel remoteproc on real hardware (i.MX 8M Nano/Plus, Zynq-7000, Arria 10) | Not yet run |
+| Linux kernel remoteproc on real hardware (i.MX 8M Nano/Plus, Zynq-7000, Arria 10, Zynq UltraScale+) | Not yet run |
 | Miri (whole workspace) | Clean, run in CI |
 | loom (`RawSpinLock`, `IrqTable`) | Clean, run in CI; it found a race in `IrqTable`, now fixed |
 | Feature combinations (`cargo hack --feature-powerset --depth 2`), `cargo deny` | Clean, run in CI |
@@ -140,6 +146,7 @@ interop-tests/   Rust ↔ C tests; builds pinned C libmetal + open-amp with cmak
 fuzz/            cargo-fuzz targets for the parsers of peer-controlled data
 examples/        imx8mn-m7-echo: Cortex-M7 firmware on cortex-m-rt
                  cortex-a9-rtu-echo: Cortex-A9 CPU1 firmware (Zynq-7000, Arria 10)
+                 zynqmp-r5-echo: Cortex-R5F firmware (Zynq UltraScale+)
 linux/           a9-rproc: remoteproc driver for a spare Cortex-A9 core (GPL-2.0)
 .github/         CI: tests, lints, embedded cross-builds, interop; nightly QEMU runs
 ```

@@ -1,0 +1,44 @@
+name: QEMU zcu102 (Zynq UltraScale+ A53 Linux + R5)
+
+# Builds AMD/Xilinx QEMU (A53s plus the MicroBlaze PMU), fetches the
+# prebuilt PMU ROM, PMU firmware, ATF and U-Boot, builds a mainline kernel
+# with xlnx_r5_remoteproc and the R5 firmware, then runs the Linux <-> R5_0
+# rpmsg echo test with two stop/start reloads. Heavy, so nightly and on
+# demand.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+jobs:
+  qemu-zynqmp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7r-none-eabihf
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build pkg-config libglib2.0-dev \
+            libpixman-1-dev libgcrypt20-dev python3-venv clang lld llvm flex \
+            bison bc device-tree-compiler
+      - uses: actions/cache@v5
+        with:
+          path: |
+            qemu-work/qemu-build
+            qemu-work/qemu-devicetrees
+            qemu-work/fw
+            qemu-work/linux
+            qemu-work/linux-build
+          key: qemu-zynqmp-${{ hashFiles('examples/zynqmp-r5-echo/qemu/reproduce.sh', 'examples/zynqmp-r5-echo/zcu102/*.dts') }}
+      - run: examples/zynqmp-r5-echo/qemu/reproduce.sh "$PWD/qemu-work"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: qemu-zynqmp-logs
+          path: |
+            qemu-work/console.log
+            qemu-work/r5-uart1.log
+            qemu-work/pmu.log
