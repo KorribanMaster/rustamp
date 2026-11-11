@@ -6,6 +6,8 @@
 # through mainline xlnx_r5_remoteproc.
 #
 #   QEMU      AMD/Xilinx fork (A53s plus the MicroBlaze PMU, co-simulated)
+#             + patches/0001 (a halted R5 stays halted when its power
+#             island comes up)
 #   firmware  PMU ROM, PMU firmware, ATF and U-Boot, prebuilt by AMD/Xilinx
 #   Linux     mainline v7.2, clang/LLVM, ZynqMP-only config, built in:
 #             xlnx_r5_remoteproc, zynqmp-ipi-mbox, rpmsg_tty
@@ -44,10 +46,19 @@ fetch_rev() { # dir url rev
 }
 
 # ---------------------------------------------------------------- QEMU ----
+# Rebuilt when the revision or a patch changes, not only when it is missing.
+qemu_id="$QEMU_REV $(cat "$here"/patches/*.patch | sha256sum | cut -d' ' -f1)"
+if [ "$(cat "$work/qemu-build/rustamp-id" 2>/dev/null)" != "$qemu_id" ]; then
+    rm -rf "$work/qemu" "$work/qemu-build"
+fi
 if [ ! -x "$work/qemu-build/qemu-system-aarch64" ] ||
    [ ! -x "$work/qemu-build/qemu-system-microblazeel" ]; then
-    log "QEMU: AMD/Xilinx fork $QEMU_REV"
-    fetch_rev "$work/qemu" https://github.com/Xilinx/qemu "$QEMU_REV"
+    log "QEMU: AMD/Xilinx fork $QEMU_REV + patches/"
+    if [ ! -d "$work/qemu/.git" ]; then
+        fetch_rev "$work/qemu" https://github.com/Xilinx/qemu "$QEMU_REV"
+        git -C "$work/qemu" -c user.name=repro -c user.email=repro@localhost \
+            am -q "$here"/patches/*.patch
+    fi
     sub() { # Subprojects from GitHub mirrors (the wraps point at gitlab.com).
         [ -d "$work/qemu/subprojects/$1" ] && return
         git clone -q "$2" "$work/qemu/subprojects/$1"
@@ -84,6 +95,7 @@ SH
             --without-default-features --disable-werror --disable-download \
             --enable-fdt=internal --enable-gcrypt > configure.log &&
         ninja -j "$jobs" qemu-system-aarch64 qemu-system-microblazeel > build.log)
+    echo "$qemu_id" > "$work/qemu-build/rustamp-id"
 fi
 
 hw="$work/qemu-devicetrees/LATEST/MULTI_ARCH"

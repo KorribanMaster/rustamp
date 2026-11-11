@@ -23,7 +23,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ninja-build pkg-config libglib2.0-dev \
             libpixman-1-dev libgcrypt20-dev python3-venv clang lld llvm flex \
-            bison bc device-tree-compiler
+            bison bc device-tree-compiler gdb
       - uses: actions/cache@v5
         with:
           path: |
@@ -32,7 +32,7 @@ jobs:
             qemu-work/fw
             qemu-work/linux
             qemu-work/linux-build
-          key: qemu-zynqmp-${{ hashFiles('examples/zynqmp-r5-echo/qemu/reproduce.sh', 'examples/zynqmp-r5-echo/zcu102/*.dts') }}
+          key: qemu-zynqmp-${{ hashFiles('examples/zynqmp-r5-echo/qemu/reproduce.sh', 'examples/zynqmp-r5-echo/qemu/patches/**', 'examples/zynqmp-r5-echo/zcu102/*.dts') }}
       - run: examples/zynqmp-r5-echo/qemu/reproduce.sh "$PWD/qemu-work"
       - uses: actions/upload-artifact@v6
         if: always()
@@ -42,3 +42,4 @@ jobs:
             qemu-work/console.log
             qemu-work/r5-uart1.log
             qemu-work/pmu.log
+            qemu-work/qemu-hang-stacks.log
