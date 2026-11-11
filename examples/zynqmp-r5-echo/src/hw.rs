@@ -3,7 +3,6 @@
 //! and the MPU.
 
 use core::ptr::{read_volatile, write_volatile};
-#[cfg(not(feature = "qemu"))]
 use core::sync::atomic::{AtomicBool, Ordering};
 
 use aarch32_cpu::pmsav7::{AccessPerms, Config, MemAttr, Mpu, Region, RegionSize};
@@ -67,9 +66,37 @@ pub fn poll_kick() -> bool {
     pending != 0
 }
 
+/// Set when a kick merged into one the host had not acknowledged yet.
+static MERGED: AtomicBool = AtomicBool::new(false);
+
 /// Kicks the host (the virtio notification; the host services all vrings).
+///
+/// A kick while our previous one is still unacknowledged (`OBS` set) only
+/// re-sets a bit that is already set, and Linux can miss it: its handler
+/// masks the IPI, schedules the vring work and queues the acknowledgement,
+/// which the mailbox core may send only after that work has run; the
+/// acknowledgement then clears the merged kick along with the first. So
+/// such a kick is sent again once the host has acknowledged
+/// ([`rekick_if_merged`]).
 pub fn kick_host() {
+    if rd(IPI_BASE, ipi::OBS) & HOST_IPI_MASK != 0 {
+        MERGED.store(true, Ordering::Relaxed);
+    }
     wr(IPI_BASE, ipi::TRIG, HOST_IPI_MASK);
+}
+
+/// Whether a merged kick still has to be sent again.
+pub fn rekick_pending() -> bool {
+    MERGED.load(Ordering::Relaxed)
+}
+
+/// Sends a merged kick again, once the host has acknowledged the earlier
+/// one. Call it while waiting for the host.
+pub fn rekick_if_merged() {
+    if rekick_pending() && rd(IPI_BASE, ipi::OBS) & HOST_IPI_MASK == 0 {
+        MERGED.store(false, Ordering::Relaxed);
+        kick_host();
+    }
 }
 
 /// Every IRQ lands here: acknowledge a host kick and wake the main loop.
