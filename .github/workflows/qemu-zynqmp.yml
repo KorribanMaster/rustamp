@@ -50,23 +50,33 @@ jobs:
           cd qemu-work
           ex=$PWD/../examples/zynqmp-r5-echo
           pass=0; fail=0
-          for i in $(seq 1 50); do
-            rm -f qemu-hang-stacks.log
-            QEMU_TIMEOUT=150 "$ex/qemu/run.sh" "$PWD/qemu-build" \
+          for i in $(seq 1 24); do
+            rm -f qemu-hang-stacks.log qemu-console.out diag.log /tmp/mon.sock
+            python3 ../.github/dbg/diag.py qemu-console.out /tmp/mon.sock diag.log &
+            diag=$!
+            QEMU_TIMEOUT=100 QEMU_EXTRA="-monitor unix:/tmp/mon.sock,server,nowait" \
+              "$ex/qemu/run.sh" "$PWD/qemu-build" \
               "$PWD/qemu-devicetrees/LATEST/MULTI_ARCH" "$PWD/fw" \
               "$PWD/linux-build/arch/arm64/boot/Image" \
               "$PWD/linux-build/arch/arm64/boot/dts/xilinx/zynqmp-zcu102-rustamp.dtb" \
               "$PWD/init" "$ex/target/armv7r-none-eabihf/release/zynqmp-r5-echo" \
               r5-uart1.log > console.log 2>&1 || true
+            kill $diag 2>/dev/null || true
             ups=$(grep -c 'up, waiting' r5-uart1.log || true)
-            if grep -q '^\[init\] PASS' console.log; then
+            if grep -aq '^\[init\] PASS' console.log; then
               pass=$((pass+1)); r=PASS
+              if [ $pass -le 2 ]; then grep -a 'DBG\|init\]\|remoteproc0:\|CPU[0-9]: \|reboot:' console.log | cut -c1-150; fi
             else
               fail=$((fail+1)); r=FAIL
-              mkdir -p fails/$i
-              cp console.log r5-uart1.log pmu.log qemu-hang-stacks.log fails/$i/ 2>/dev/null || true
-              grep -a -e 'init\]' -e 'remoteproc0' -e 'run.sh' console.log | tail -8
-              tail -4 r5-uart1.log || true
+              echo "::group::fail $i"
+              grep -a -e 'DBG' -e 'init\]' -e 'remoteproc0' -e 'run.sh' -e 'rpmsg' console.log | grep -a -v "DBG.*cpu[0-3] " | tail -60 | cut -c1-150
+              echo "--- r5"; tail -6 r5-uart1.log || true
+              echo "--- diag"; cat diag.log || true
+              for pc in $(grep -a -A12 'CPU#4' diag.log | grep -a -o 'R15=[0-9a-f]*' | cut -d= -f2 | sort -u | head -12); do
+                echo "pc $pc: $(llvm-addr2line -f -C -e rpmsg-echo.elf 0x$pc | tr '\n' ' ')"
+              done
+              if [ -f qemu-hang-stacks.log ]; then echo "--- stacks"; grep -a -v '^\[New LWP\|^$' qemu-hang-stacks.log | cut -c1-220 | head -150; fi
+              echo "::endgroup::"
             fi
             echo "run $i: $r ups=$ups"
           done
