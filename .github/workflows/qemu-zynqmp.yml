@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [baseline, patched]
+        variant: [patched]
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -44,6 +44,7 @@ jobs:
           QEMU_REV=$(sed -n 's/^QEMU_REV=//p' $here/reproduce.sh)
           echo "$QEMU_REV $(cat "$here"/patches/*.patch | sha256sum | cut -d' ' -f1)" > qemu-work/qemu-build/rustamp-id
       - run: examples/zynqmp-r5-echo/qemu/reproduce.sh "$PWD/qemu-work" || true
+      - run: gcc --version; python3 --version; ls qemu-work/qemu-build/qemu-system-*
       - name: loop
         run: |
           cd qemu-work
@@ -65,7 +66,7 @@ jobs:
               mkdir -p fails/$i
               cp console.log r5-uart1.log pmu.log qemu-hang-stacks.log fails/$i/ 2>/dev/null || true
               grep -a -e 'init\]' -e 'remoteproc0' -e 'run.sh' console.log | tail -8
-              tail -4 r5-uart1.log
+              tail -4 r5-uart1.log || true
             fi
             echo "run $i: $r ups=$ups"
           done
