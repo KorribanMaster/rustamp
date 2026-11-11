@@ -14,6 +14,10 @@ jobs:
   qemu-zynqmp:
     runs-on: ubuntu-latest
     timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, patched]
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -24,7 +28,7 @@ jobs:
           sudo apt-get install -y ninja-build pkg-config libglib2.0-dev \
             libpixman-1-dev libgcrypt20-dev python3-venv clang lld llvm flex \
             bison bc device-tree-compiler gdb
-      - uses: actions/cache@v5
+      - uses: actions/cache/restore@v5
         with:
           path: |
             qemu-work/qemu-build
@@ -32,14 +36,46 @@ jobs:
             qemu-work/fw
             qemu-work/linux
             qemu-work/linux-build
-          key: qemu-zynqmp-${{ hashFiles('examples/zynqmp-r5-echo/qemu/reproduce.sh', 'examples/zynqmp-r5-echo/qemu/patches/**', 'examples/zynqmp-r5-echo/zcu102/*.dts') }}
-      - run: examples/zynqmp-r5-echo/qemu/reproduce.sh "$PWD/qemu-work"
+          key: qemu-zynqmp-f0739d866825b13a73ce574bc92d6d4403ba4eb49cfc90399f2fe4db3a9d0f3a
+      - name: keep the unpatched QEMU
+        if: matrix.variant == 'baseline'
+        run: |
+          here=examples/zynqmp-r5-echo/qemu
+          QEMU_REV=$(sed -n 's/^QEMU_REV=//p' $here/reproduce.sh)
+          echo "$QEMU_REV $(cat "$here"/patches/*.patch | sha256sum | cut -d' ' -f1)" > qemu-work/qemu-build/rustamp-id
+      - run: examples/zynqmp-r5-echo/qemu/reproduce.sh "$PWD/qemu-work" || true
+      - name: loop
+        run: |
+          cd qemu-work
+          ex=$PWD/../examples/zynqmp-r5-echo
+          pass=0; fail=0
+          for i in $(seq 1 50); do
+            rm -f qemu-hang-stacks.log
+            QEMU_TIMEOUT=150 "$ex/qemu/run.sh" "$PWD/qemu-build" \
+              "$PWD/qemu-devicetrees/LATEST/MULTI_ARCH" "$PWD/fw" \
+              "$PWD/linux-build/arch/arm64/boot/Image" \
+              "$PWD/linux-build/arch/arm64/boot/dts/xilinx/zynqmp-zcu102-rustamp.dtb" \
+              "$PWD/init" "$ex/target/armv7r-none-eabihf/release/zynqmp-r5-echo" \
+              r5-uart1.log > console.log 2>&1 || true
+            ups=$(grep -c 'up, waiting' r5-uart1.log || true)
+            if grep -q '^\[init\] PASS' console.log; then
+              pass=$((pass+1)); r=PASS
+            else
+              fail=$((fail+1)); r=FAIL
+              mkdir -p fails/$i
+              cp console.log r5-uart1.log pmu.log qemu-hang-stacks.log fails/$i/ 2>/dev/null || true
+              grep -a -e 'init\]' -e 'remoteproc0' -e 'run.sh' console.log | tail -8
+              tail -4 r5-uart1.log
+            fi
+            echo "run $i: $r ups=$ups"
+          done
+          echo "RESULT ${{ matrix.variant }}: pass=$pass fail=$fail"
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: qemu-zynqmp-logs
+          name: qemu-zynqmp-logs-${{ matrix.variant }}
           path: |
             qemu-work/console.log
             qemu-work/r5-uart1.log
             qemu-work/pmu.log
-            qemu-work/qemu-hang-stacks.log
+            qemu-work/fails
