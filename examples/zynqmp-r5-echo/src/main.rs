@@ -56,9 +56,52 @@ fn delay_us(us: u32) {
     }
 }
 
+/// QEMU: the model does not power R5_0 down when Linux stops it. The PMU
+/// firmware pulses its reset, so the core boots the old image again at once
+/// and keeps running while the next start clears the TCMs and loads the new
+/// image into them, until that start resets it. Meanwhile it runs zeroes and
+/// half-loaded code, and its wild stores can corrupt the new image (crashes
+/// at boot, `ns=false`, echoes that stop after a few hundred messages).
+///
+/// Linux writes this word back to [`IMAGE_FRESH`] with every image it loads,
+/// so finding it used means this run is such a restart: nothing may run.
+#[cfg(feature = "qemu")]
+#[unsafe(link_section = ".rsc_claim")]
+#[used]
+static CLAIM: core::sync::atomic::AtomicU32 = core::sync::atomic::AtomicU32::new(IMAGE_FRESH);
+/// Not zero, so that `.rsc_claim` has contents in the ELF (a zero would make
+/// it NOBITS).
+#[cfg(feature = "qemu")]
+const IMAGE_FRESH: u32 = 0x4E45_5721; // "NEW!"
+#[cfg(feature = "qemu")]
+const IMAGE_USED: u32 = 0x5553_4544; // "USED"
+
+/// Claims a freshly loaded image; returns false if it was booted before.
+#[cfg(feature = "qemu")]
+fn claim_image() -> bool {
+    use core::sync::atomic::Ordering::SeqCst;
+    if CLAIM.load(SeqCst) != IMAGE_FRESH {
+        return false;
+    }
+    CLAIM.store(IMAGE_USED, SeqCst);
+    aarch32_cpu::asm::dsb();
+    true
+}
+
 #[aarch32_rt::entry]
 fn main() -> ! {
+    #[cfg(feature = "qemu")]
+    let fresh = claim_image();
     uart::init();
+    #[cfg(feature = "qemu")]
+    if !fresh {
+        // Interrupts are masked since reset and the model has no RPU GIC,
+        // so this stays in WFI, fetching nothing, until Linux resets us.
+        log!("rustamp r5: restarted on a used image, parking until reset");
+        loop {
+            aarch32_cpu::asm::wfi();
+        }
+    }
     log!("rustamp r5: up, waiting for the host (DRIVER_OK)");
     hw::init_mpu();
     hw::init_irq();

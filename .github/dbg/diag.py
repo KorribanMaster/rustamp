@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """DEBUG: watches the console; on a failure line or a stall, dumps guest
 state through the QEMU monitor. usage: diag.py CONSOLE MONITOR_SOCKET OUT"""
-import re, socket, sys, time
+import os, re, socket, sys, time
 
 console, sockpath, outpath = sys.argv[1:4]
 out = open(outpath, "w", buffering=1)
@@ -38,6 +38,13 @@ KEEP = re.compile(r"CPU#|PC=|R\d\d=|PSR=|^[0-9a-f]{16}:")
 def dump(why):
     out.write(f"=== diag: {why}\n")
     try:
+        # R5_0's ATCM and the table + claim word, as the A53s see them.
+        atcm = os.path.abspath("atcm.bin")
+        for c, r in mon(["stop", f"pmemsave 0xffe00000 0x10000 {atcm}",
+                         "xp /8wx 0x3ed00000", "xp /24wx 0x3ed00020",
+                         "cont"]):
+            if c.startswith("xp"):
+                out.write(c + " -> " + " | ".join(l.strip() for l in r.splitlines()[1:] if KEEP.search(l)) + "\n")
         for rnd in range(3):
             res = mon(["stop", "info registers -a",
                        "xp /8wx 0xff310000", "xp /8wx 0xff300000",

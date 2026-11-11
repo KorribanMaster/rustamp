@@ -28,7 +28,7 @@ _fiq_stack_size = 64;
 _sys_stack_size = 16K;
 
 /*
- * The resource table and the trace buffer are sections of their own in DDR,
+ * The resource table, the claim word and the trace buffer are sections of their own in DDR,
  * so the reset code neither copies nor zeroes them: Linux writes the table
  * before starting us, and finds both by address (the table also by name).
  * They go after .uninit: link.x takes __edata and __ebss from the location
@@ -40,6 +40,12 @@ SECTIONS
   .resource_table : ALIGN(8)
   {
     KEEP(*(.resource_table));
+  } > RSC
+
+  /* QEMU build: a word Linux reloads with every image, see main.rs. */
+  .rsc_claim : ALIGN(4)
+  {
+    KEEP(*(.rsc_claim));
   } > RSC
 
   .rsc_trace (NOLOAD) :
