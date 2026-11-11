@@ -8,6 +8,9 @@
 #   QEMU_BUILD  directory with qemu-system-aarch64 and qemu-system-microblazeel
 #   HW_DTB_DIR  qemu-devicetrees LATEST/MULTI_ARCH (zcu102-arm.dtb, zynqmp-pmu.dtb)
 #   FW_DIR      pmu-rom.elf, pmufw.elf, arm-trusted-firmware.elf, u-boot.elf
+#
+# The console goes to stdout. Exits 0 once Linux has powered off, 124 if it
+# has not after QEMU_TIMEOUT seconds (default 300; a run takes about 30).
 set -eu
 q=$1 hw=$2 fw=$3 kernel=$4 dtb=$5 init=$6 firmware=$7 r5log=${8:-r5-uart1.log}
 here=$(cd "$(dirname "$0")" && pwd)
@@ -33,7 +36,9 @@ python3 "$here/mkbootscr.py" boot.cmd boot.scr
 
 # The two QEMU processes talk over sockets in this directory.
 mp=$(mktemp -d)
-trap 'kill $pmu 2>/dev/null || true; rm -rf "$mp"' EXIT INT TERM
+pmu= a53=
+trap 'kill $pmu $a53 2>/dev/null || true; rm -rf "$mp"' EXIT
+trap 'exit 130' INT TERM
 
 "$q/qemu-system-microblazeel" -M microblaze-fdt -display none \
     -serial null -serial null \
@@ -44,7 +49,8 @@ trap 'kill $pmu 2>/dev/null || true; rm -rf "$mp"' EXIT INT TERM
     > pmu.log 2>&1 < /dev/null &
 pmu=$!
 
-timeout 900 "$q/qemu-system-aarch64" -M arm-generic-fdt -display none \
+out=qemu-console.out
+"$q/qemu-system-aarch64" -M arm-generic-fdt -display none \
     -serial stdio -serial "file:$r5log" \
     -hw-dtb "$hw/zcu102-arm.dtb" -machine-path "$mp" -m 4G \
     -device loader,file="$fw/arm-trusted-firmware.elf",cpu-num=0 \
@@ -54,4 +60,39 @@ timeout 900 "$q/qemu-system-aarch64" -M arm-generic-fdt -display none \
     -device loader,file=initramfs.cpio.gz,addr=0x4000000,force-raw=on \
     -device loader,file=boot.scr,addr=0x20000000,force-raw=on \
     -global xlnx,zynqmp-boot.cpu-num=0 -global xlnx,zynqmp-boot.use-pmufw=true \
-    -no-reboot ${QEMU_EXTRA:-} < /dev/null || true
+    -no-reboot ${QEMU_EXTRA:-} > "$out" 2>&1 < /dev/null &
+a53=$!
+
+# Nothing in this setup switches the machine off: after "reboot: Power
+# down" the PMU firmware leaves both QEMU processes running. So follow the
+# console and end the run ourselves, on that line or on a kernel panic.
+shown=0
+show() { # Copies what the console has gained since the last call.
+    size=$(wc -c < "$out")
+    [ "$size" -gt "$shown" ] || return 0
+    tail -c "+$((shown + 1))" "$out" | head -c "$((size - shown))"
+    shown=$size
+}
+
+status=124
+deadline=$(($(date +%s) + ${QEMU_TIMEOUT:-300}))
+while kill -0 "$a53" 2> /dev/null; do
+    show
+    if grep -aq -e 'reboot: Power down' -e 'Kernel panic' "$out"; then
+        status=0
+        break
+    fi
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+        echo >&2
+        echo "run.sh: no power-off after ${QEMU_TIMEOUT:-300} s, stopping QEMU" >&2
+        break
+    fi
+    sleep 1
+done
+if ! kill -0 "$a53" 2> /dev/null; then
+    # QEMU ended by itself: report how.
+    wait "$a53" && status=0 || status=$?
+fi
+sleep 1
+show
+exit "$status"

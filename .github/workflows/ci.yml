@@ -200,6 +200,10 @@ jobs:
           readelf -SW "$elf" | grep -E '\.vector_table +PROGBITS +00000000'
           readelf -SW "$elf" | grep -E '\.resource_table +PROGBITS +3ed00000'
           readelf -SW "$elf" | grep -E '\.rsc_trace +NOBITS +3ed01000'
+          # QEMU: the claim word must be loaded by Linux, so not NOBITS.
+          if [ "${{ matrix.variant }}" = qemu ]; then
+            readelf -SW "$elf" | grep -E '\.rsc_claim +PROGBITS +3ed00'
+          fi
           # The reset code zeroes .bss; the stacks and .bss stay in BTCM.
           ebss=$(nm "$elf" | awk '$3 == "__ebss" { print $1 }')
           test $((0x$ebss)) -le $((0x30000))

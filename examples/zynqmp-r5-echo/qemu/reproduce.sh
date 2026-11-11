@@ -76,14 +76,21 @@ done
 SH
     chmod +x "$work/bin/libgcrypt-config"
     # No optional host libraries: this QEMU predates some (libnfs) and needs
-    # only libgcrypt (its crypto models) and the bundled libfdt.
+    # only libgcrypt (its crypto models) and the bundled libfdt. That libfdt
+    # is built with -Werror by default and predates glibc 2.43's
+    # const-preserving memchr(), hence dtc:werror.
     mkdir -p "$work/qemu-build"
+    quiet() { # log command...: output to the log, its end shown on failure
+        l=$1
+        shift
+        "$@" > "$l" 2>&1 || { tail -n 60 "$l" >&2; return 1; }
+    }
     (cd "$work/qemu-build" &&
-        PATH="$work/bin:$PATH" "$work/qemu/configure" \
+        PATH="$work/bin:$PATH" quiet configure.log "$work/qemu/configure" \
             --target-list=aarch64-softmmu,microblazeel-softmmu \
             --without-default-features --disable-werror --disable-download \
-            --enable-fdt=internal --enable-gcrypt > configure.log &&
-        ninja -j "$jobs" qemu-system-aarch64 qemu-system-microblazeel > build.log)
+            --enable-fdt=internal --enable-gcrypt -Ddtc:werror=false &&
+        quiet build.log ninja -j "$jobs" qemu-system-aarch64 qemu-system-microblazeel)
 fi
 
 hw="$work/qemu-devicetrees/LATEST/MULTI_ARCH"
