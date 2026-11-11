@@ -46,6 +46,13 @@ kick the host it writes the host's agent mask to `TRIG`:
 `zynqmp.dtsi`. Older Xilinx device trees put Linux on channel 7: use
 `0x0100_0000` there.
 
+A kick sent while the previous one is still unacknowledged (`OBS` set) is
+sent again once the host acknowledges. Linux 7.2 can drop such a merged
+kick: its IPI handler masks the interrupt and queues the acknowledgement,
+which the mailbox core may only send after the vring work has already run,
+and that acknowledgement clears both kicks. Without the resend the host
+misses the last message posted in that window.
+
 The default build takes IPI interrupt 65 on the RPU GIC and sleeps in
 `wfi`. `--features qemu` polls `ISR` instead, because AMD/Xilinx QEMU's
 ZCU102 model does not instantiate the RPU GIC.

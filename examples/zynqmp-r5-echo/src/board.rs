@@ -14,6 +14,11 @@ pub const TRACE_DA: u32 = 0x3ED0_1000;
 /// Trace buffer size.
 pub const TRACE_LEN: u32 = 0x1000;
 
+/// QEMU: the last page of `rproc_0_fw_image`, outside every segment of the
+/// ELF, so Linux never writes it. A restart that must not run parks here
+/// rather than in the TCMs Linux is reloading (see `main.rs`).
+pub const PARK_ADDR: u32 = FW_DDR_BASE + FW_DDR_SIZE - 0x1000;
+
 /// Shared memory: `vdev0vring0`, `vdev0vring1`, `vdev0buffer`.
 pub const SHM_BASE: u32 = 0x3ED4_0000;
 /// 16 KiB per vring plus the 1 MiB buffer pool.
@@ -66,6 +71,13 @@ mod tests {
     fn trace_buffer_is_in_the_firmware_carveout() {
         assert!(TRACE_DA >= FW_DDR_BASE + 0x1000, "after the resource table");
         assert!(TRACE_DA + TRACE_LEN <= FW_DDR_BASE + FW_DDR_SIZE);
+    }
+
+    #[test]
+    fn park_page_is_in_the_carveout_after_the_trace_buffer() {
+        assert!(PARK_ADDR >= TRACE_DA + TRACE_LEN);
+        assert!(PARK_ADDR + 8 <= FW_DDR_BASE + FW_DDR_SIZE);
+        assert_eq!(PARK_ADDR % 4, 0);
     }
 
     #[test]

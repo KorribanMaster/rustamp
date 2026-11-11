@@ -51,14 +51,78 @@ fn delay_us(us: u32) {
     // waiting, so the host's mailbox never stalls.
     #[cfg(feature = "qemu")]
     hw::poll_kick();
+    hw::rekick_if_merged();
     for _ in 0..us.saturating_mul(100) {
         core::hint::spin_loop();
     }
 }
 
+/// QEMU: the model does not power R5_0 down when Linux stops it. The PMU
+/// firmware pulses its reset, so the core boots the old image again at once
+/// and keeps running while the next start clears the TCMs and loads the new
+/// image into them, until that start resets it. Meanwhile it runs zeroes and
+/// half-loaded code, and its wild stores can corrupt the new image (crashes
+/// at boot, `ns=false`, a dead R5 after the reload).
+///
+/// Linux writes this word back to [`IMAGE_FRESH`] with every image it loads,
+/// so finding it used means this run is such a restart: it must stop
+/// fetching from the TCMs before Linux clears them ([`park`]).
+#[cfg(feature = "qemu")]
+#[unsafe(link_section = ".rsc_claim")]
+#[used]
+static CLAIM: core::sync::atomic::AtomicU32 = core::sync::atomic::AtomicU32::new(IMAGE_FRESH);
+/// Not zero, so that `.rsc_claim` has contents in the ELF (a zero would make
+/// it NOBITS).
+#[cfg(feature = "qemu")]
+const IMAGE_FRESH: u32 = 0x4E45_5721; // "NEW!"
+#[cfg(feature = "qemu")]
+const IMAGE_USED: u32 = 0x5553_4544; // "USED"
+
+/// Stops this core for good, until Linux resets it: copies a `wfi` loop to
+/// [`board::PARK_ADDR`] in DDR, which Linux never writes, and runs it. A
+/// loop in the TCMs is not enough: the model can leave WFI on the power
+/// requests that come with the reload, and would then run the TCMs while
+/// Linux clears and refills them. Called right after reset, with the MPU off
+/// (DDR executable) and interrupts masked.
+#[cfg(feature = "qemu")]
+fn park() -> ! {
+    const WFI: u32 = 0xE320_F003; // wfi
+    const BACK: u32 = 0xEAFF_FFFD; // b . - 4 (back to the wfi)
+    let p = board::PARK_ADDR as usize as *mut u32;
+    // SAFETY: a page of the firmware carve-out that nothing else uses; the
+    // two words are a complete A32 loop, entered in A32 state (bit 0 clear).
+    unsafe {
+        p.write_volatile(WFI);
+        p.add(1).write_volatile(BACK);
+        aarch32_cpu::asm::dsb();
+        aarch32_cpu::asm::isb();
+        let f: extern "C" fn() -> ! = core::mem::transmute(p);
+        f()
+    }
+}
+
+/// Claims a freshly loaded image; returns false if it was booted before.
+#[cfg(feature = "qemu")]
+fn claim_image() -> bool {
+    use core::sync::atomic::Ordering::SeqCst;
+    if CLAIM.load(SeqCst) != IMAGE_FRESH {
+        return false;
+    }
+    CLAIM.store(IMAGE_USED, SeqCst);
+    aarch32_cpu::asm::dsb();
+    true
+}
+
 #[aarch32_rt::entry]
 fn main() -> ! {
+    #[cfg(feature = "qemu")]
+    let fresh = claim_image();
     uart::init();
+    #[cfg(feature = "qemu")]
+    if !fresh {
+        log!("rustamp r5: restarted on a used image, parking until reset");
+        park();
+    }
     log!("rustamp r5: up, waiting for the host (DRIVER_OK)");
     hw::init_mpu();
     hw::init_irq();
@@ -130,14 +194,18 @@ fn main() -> ! {
         // QEMU: poll the IPI instead of sleeping on its interrupt.
         #[cfg(feature = "qemu")]
         while !hw::poll_kick() {
+            hw::rekick_if_merged();
             core::hint::spin_loop();
         }
         // Sleep until the next kick. Checking the flag with interrupts
         // masked closes the race with the handler: a kick arriving after
         // the check still ends the WFI, and is taken once `free` unmasks.
+        // A merged kick still to resend keeps us polling instead.
+        #[cfg(not(feature = "qemu"))]
+        hw::rekick_if_merged();
         #[cfg(not(feature = "qemu"))]
         aarch32_cpu::interrupt::free(|| {
-            if !hw::KICKED.swap(false, Ordering::AcqRel) {
+            if !hw::KICKED.swap(false, Ordering::AcqRel) && !hw::rekick_pending() {
                 aarch32_cpu::asm::dsb();
                 aarch32_cpu::asm::wfi();
             }

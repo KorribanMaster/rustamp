@@ -16,7 +16,8 @@ Expected end of the console:
 [init] PASS: 6000 round trips, 770136 bytes echoed by the RustAmp firmware across 2 stop/start reloads
 ```
 
-and on R5_0's UART1 (`r5-uart1.log`), per start:
+and on R5_0's UART1 (`r5-uart1.log`), per start (each stop adds a
+`parking until reset` line, see below):
 
 ```text
 rustamp r5: up, waiting for the host (DRIVER_OK)
@@ -54,10 +55,20 @@ rustamp r5: echoed 2000 messages, 256712 bytes
   1), halted, with low vectors (`RPU_0_CFG`/`RPU_1_CFG`). (Those registers
   sit behind the platform's access protection, so `-device loader` writes
   from QEMU's side do not reach them; U-Boot's own writes do.)
-* **Restarts can catch the image mid-load.** On a stop/start reload the
-  model can let R5_0 run briefly before Linux has written the new image and
-  resource table, until the boot request restarts it. The firmware
-  therefore waits for a valid resource table instead of failing.
+* **A stop does not stop R5_0.** The model does not power the core down:
+  the PMU firmware only pulses its reset, so the old image boots again at
+  once and keeps running while the next start zeroes the TCMs and loads the
+  new image into them, until that start resets the core. Left alone, that
+  run executes half-loaded code and its stray stores corrupt the new image
+  (a dead R5, `ns=false`, a missing `/dev/ttyRPMSG0`). The firmware
+  (`--features qemu`) therefore claims each image through a word in
+  `.rsc_claim`, which Linux reloads with the image. A run that finds it
+  already claimed logs `restarted on a used image, parking until reset` and
+  parks in a `wfi` loop it copies to the last page of `rproc_0_fw_image`,
+  which no segment covers: a loop in the TCMs would still run while Linux
+  rewrites them, because the model leaves WFI on the reload's power
+  requests. The firmware also waits for a valid resource table instead of
+  failing.
 * **Prebuilt firmware.** PMU ROM, PMU firmware, ATF and U-Boot come from
   AMD/Xilinx (`xlnx_rel_v2025.2`), downloaded at run time and never
   committed. The PMU ROM is under a Xilinx binary licence that permits
